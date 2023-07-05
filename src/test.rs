@@ -1,3 +1,5 @@
+/// Test module - we haven't implemented any logic here other than the Cw20 base so it might not matter a lot
+/// at the moment. But this can be extended however required.
 #[cfg(test)]
 mod test {
     use crate::contract::*;
@@ -7,8 +9,11 @@ mod test {
     use cw20_base::contract::query_token_info;
     use cw20_base::msg::InstantiateMsg;
 
+    /// basic instantiation test verifying instantiate response and the token's information
+    /// by querying.
     #[test]
     fn instantiate_test() {
+        // instantiate and assert response
         let mut deps = mock_dependencies();
         let env : Env            = mock_env();
         let info: MessageInfo    = mock_info(&"sender", &[]);
@@ -28,6 +33,7 @@ mod test {
         let res: Response = instantiate(deps.as_mut(), env, info, msg).unwrap();
         assert_eq!(0, res.messages.len());
 
+        // assert queried token matches the instantiated token
         assert_eq!(
             query_token_info(deps.as_ref()).unwrap(),
             TokenInfoResponse {

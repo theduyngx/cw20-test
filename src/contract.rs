@@ -204,6 +204,17 @@ pub fn query(
 }
 
 
+/// Migrate - contract migration. Contract migration essentially allows a contract to have its ID changed
+/// (internal logic of the wasm file) without having to create a new contract. CosmWasm, unlike Ethereum - 
+/// most contracts implement the same standard (i.e. Cw20) so no need to upload the whole thing. Also if 
+/// the underlying logic remains similar, we can do very flexible things with it, such as migration.
+/// ### Arguments
+/// * `_deps` - mutable dependency which has the storage (state) of the chain
+/// * `_env`  - environment variables which include block information
+/// * `_msg`  - the execute message
+/// ### Returns
+/// * the execute response on Ok
+/// * the error type on Err
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
     Ok(Response::default())
