@@ -23,12 +23,12 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 
 /// Instantiate - calling cw20_base instantiation
-/// ### Arguments
+/// # Arguments
 /// * `deps` - mutable dependency which has the storage (state) of the chain
 /// * `env`  - environment variables which include block information
 /// * `info` - message info, such as sender/initiator and denomination
 /// * `msg`  - the instantiate message
-/// ### Returns
+/// # Returns
 /// * the instantiate response on Ok
 /// * the error type on Err
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -44,12 +44,12 @@ pub fn instantiate(
 
 
 /// Execute - calling cw20_base execute functions. Arguments are identical to that of Instantiate.
-/// ### Arguments
+/// # Arguments
 /// * `deps` - mutable dependency which has the storage (state) of the chain
 /// * `env`  - environment variables which include block information
 /// * `info` - message info, such as sender/initiator and denomination
 /// * `msg`  - the execute message
-/// ### Returns
+/// # Returns
 /// * the execute response on Ok
 /// * the error type on Err
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -141,11 +141,11 @@ pub fn execute(
 
 
 /// Query - calling cw20_base functions.
-/// ### Arguments
+/// # Arguments
 /// * `deps` - mutable dependency which has the storage (state) of the chain
 /// * `_env` - environment variables which include block information
 /// * `msg`  - the execute message
-/// ### Returns
+/// # Returns
 /// Serialized binary representing the portable queried response
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(
@@ -207,11 +207,11 @@ pub fn query(
 /// Migrate - contract migration; allows contract to have its ID changed (internal logic of contract
 /// without having to create a new one. CosmWasm, unlike Ethereum - most contracts implement the same
 /// standard (i.e. Cw20) so no need to upload the whole thing (same standard - same core logic).
-/// ### Arguments
+/// # Arguments
 /// * `_deps` - mutable dependency which has the storage (state) of the chain
 /// * `_env`  - environment variables which include block information
 /// * `_msg`  - the execute message
-/// ### Returns
+/// # Returns
 /// * the execute response on Ok
 /// * the error type on Err
 #[cfg_attr(not(feature = "library"), entry_point)]
