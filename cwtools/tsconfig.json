@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "strict": false,
+        "resolveJsonModule": true,
+        "useDefineForClassFields": false,
+        "moduleResolution": "node",
+        "isolatedModules": true,
+        "esModuleInterop": true,
+        "target": "esnext"
+    },
+    "exclude": [
+        "node_modules"
+    ],
+    "ts-node": {
+        "transpileOnly": true,
+        "esm": true,
+        "ignore": [
+            "node_modules/(?!@cosmwasm)"
+        ]
+    }
+}
