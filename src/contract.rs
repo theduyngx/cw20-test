@@ -43,7 +43,7 @@ pub fn instantiate(
 }
 
 
-/// Execute - calling cw20_base execute function. Arguments are identical to that of Instantiate.
+/// Execute - calling cw20_base execute functions. Arguments are identical to that of Instantiate.
 /// ### Arguments
 /// * `deps` - mutable dependency which has the storage (state) of the chain
 /// * `env`  - environment variables which include block information
@@ -140,7 +140,7 @@ pub fn execute(
 }
 
 
-/// Query - calling cw20_base function.
+/// Query - calling cw20_base functions.
 /// ### Arguments
 /// * `deps` - mutable dependency which has the storage (state) of the chain
 /// * `_env` - environment variables which include block information
@@ -204,10 +204,9 @@ pub fn query(
 }
 
 
-/// Migrate - contract migration. Contract migration essentially allows a contract to have its ID changed
-/// (internal logic of the wasm file) without having to create a new contract. CosmWasm, unlike Ethereum - 
-/// most contracts implement the same standard (i.e. Cw20) so no need to upload the whole thing. Also if 
-/// the underlying logic remains similar, we can do very flexible things with it, such as migration.
+/// Migrate - contract migration; allows contract to have its ID changed (internal logic of contract
+/// without having to create a new one. CosmWasm, unlike Ethereum - most contracts implement the same
+/// standard (i.e. Cw20) so no need to upload the whole thing (same standard - same core logic).
 /// ### Arguments
 /// * `_deps` - mutable dependency which has the storage (state) of the chain
 /// * `_env`  - environment variables which include block information

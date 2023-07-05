@@ -1,5 +1,7 @@
 # Cw-20 Token Implementation
 
+`cwtools` is an alternative to Rust-optimizer. It is developed by Oraichain, source code here: https://github.com/oraichain/cosmwasm-tools. This file only serves to remind of the steps and brief functionalities to 'deploy' a Cosmos smart contract.
+
 1. **Configuration**: configure `.env` and `package.json` to allow Node.js and NPM servers.
    Specifically, the env should include:
    * the encrypted mnemonic
