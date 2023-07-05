@@ -18,7 +18,7 @@ use cw20_base::msg::{
     InstantiateMsg, ExecuteMsg, QueryMsg
 };
 
-const CONTRACT_NAME: &str = "crates.io::cw20-test";
+const CONTRACT_NAME: &str = "crates.io::eames-token";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 
