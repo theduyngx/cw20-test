@@ -49,29 +49,36 @@ const genTS = async (contracts: Array<ContractFile>, tsFolder: string, enabledRe
 };
 
 const isPrivateType = (type: string) => {
-  return type.indexOf('Response') !== -1 || type === 'InstantiateMsg' || type === 'ExecuteMsg' || type === 'QueryMsg' || type === 'MigrateMsg';
+  return type.indexOf('Response') !== -1 || type === 'InstantiateMsg' || type === 'ExecuteMsg' || 
+    type === 'QueryMsg' || type === 'MigrateMsg';
 };
 
-const fixImport = async (clientName: string, ext: string, typeData: { [key: string]: string }, outPath: string) => {
+const fixImport = async (
+  clientName: string, 
+  ext: string, 
+  typeData: { [key: string]: string }, 
+  outPath: string
+) => {
   const clientFile = join(outPath, `${clientName}.${ext}`);
   const clientData = await readFile(clientFile);
 
   await writeFile(
     clientFile,
-    clientData.toString().replace(new RegExp(`import\\s+\\{(.*?)\\}\\s+from\\s+"\\.\\/${clientName}\\.types";`), (_, g1: string) => {
-      const [clientImportData, typesImportData] = g1
-        .trim()
-        .split(/\s*,\s*/)
-        .reduce(
-          (ret, el) => {
-            ret[!typeData[el] ? 0 : 1].push(el);
-            return ret;
-          },
-          [[], []]
-        );
-
-      return `import {${typesImportData.join(', ')}} from "./types";\nimport {${clientImportData.join(', ')}} from "./${clientName}.types";`;
-    })
+    clientData.toString().replace(
+      new RegExp(`import\\s+\\{(.*?)\\}\\s+from\\s+"\\.\\/${clientName}\\.types";`), (_, g1: string) => {
+        const [clientImportData, typesImportData] = g1
+          .trim()
+          .split(/\s*,\s*/)
+          .reduce(
+            (ret, el) => {
+              ret[!typeData[el] ? 0 : 1].push(el);
+              return ret;
+            },
+            [[], []]
+          );
+          return `import {${typesImportData.join(', ')}} from "./types";\nimport {${clientImportData.join(', ')}} from "./${clientName}.types";`;
+        }
+      )
   );
 };
 

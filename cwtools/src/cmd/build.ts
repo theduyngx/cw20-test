@@ -12,7 +12,13 @@ const {
   promises: { mkdir, readFile, copyFile, rm, stat }
 } = fs;
 
-const buildContract = async (contractDir: string, debug: boolean, output: string, targetDir: string, optimizeArgs: string[]) => {
+const buildContract = async (
+  contractDir: string, 
+  debug: boolean, 
+  output: string, 
+  targetDir: string, 
+  optimizeArgs: string[]
+) => {
   // name is extract from Cargo.toml
   const cargoPath = join(contractDir, 'Cargo.toml');
   const name = basename(contractDir);
@@ -33,16 +39,31 @@ const buildContract = async (contractDir: string, debug: boolean, output: string
   // rm old file to clear cache when displaying size
   await rm(wasmFile, { force: true });
   if (debug) {
-    await spawnPromise('cargo', ['build', '-q', '--lib', '--target-dir', targetDir, '--target', 'wasm32-unknown-unknown'], contractDir);
+    await spawnPromise(
+      'cargo', 
+      ['build', '-q', '--lib', '--target-dir', targetDir, '--target', 'wasm32-unknown-unknown'], 
+      contractDir
+    );
     await copyFile(join(targetDir, 'wasm32-unknown-unknown', 'debug', buildName + '.wasm'), wasmFile);
   } else {
-    await spawnPromise('cargo', ['build', '-q', '--release', '--lib', '--target-dir', targetDir, '--target', 'wasm32-unknown-unknown'], contractDir, {
-      RUSTFLAGS: '-C link-arg=-s'
-    });
+    await spawnPromise(
+      'cargo', 
+      ['build', '-q', '--release', '--lib', '--target-dir', targetDir, '--target', 'wasm32-unknown-unknown'], 
+      contractDir,
+      { RUSTFLAGS: '-C link-arg=-s' }
+    );
 
     // wasm-optimize on all results
     console.log(`Optimizing ${wasmFile}`);
-    await spawnPromise('wasm-opt', [...optimizeArgs, '--disable-sign-ext', join(targetDir, 'wasm32-unknown-unknown', 'release', buildName + '.wasm'), '-o', wasmFile], contractDir);
+    await spawnPromise(
+      'wasm-opt', 
+      [
+        ...optimizeArgs, '--disable-sign-ext', 
+        join(targetDir, 'wasm32-unknown-unknown', 'release', buildName + '.wasm'), 
+        '-o', wasmFile
+      ], 
+      contractDir
+    );
   }
 
   // show content
@@ -61,7 +82,14 @@ const buildContract = async (contractDir: string, debug: boolean, output: string
  * @param watchContract
  * @param output
  */
-const buildContracts = async (packages: string[], debug: boolean, schema: boolean, watchMode: boolean, output: string, optimizeArgs: string[]) => {
+const buildContracts = async (
+  packages: string[], 
+  debug: boolean, 
+  schema: boolean, 
+  watchMode: boolean, 
+  output: string, 
+  optimizeArgs: string[]
+) => {
   const cargoDir = join(os.homedir(), '.cargo');
   const targetDir = join(cargoDir, 'target');
 

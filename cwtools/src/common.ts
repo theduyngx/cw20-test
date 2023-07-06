@@ -52,7 +52,10 @@ export const buildSchemas = async (packages: string[], targetDir: string) => {
 
   // schema can not run in parallel
   for (const [binCmd, artifactDir] of res) {
-    execFileSync('cargo', ['run', '-q', binCmd, 'schema', '--target-dir', targetDir], { cwd: artifactDir, env: process.env, stdio: 'inherit' });
+    execFileSync(
+      'cargo',
+      ['run', '-q', binCmd, 'schema', '--target-dir', targetDir], 
+      { cwd: artifactDir, env: process.env, stdio: 'inherit' });
   }
 };
 
