@@ -19,17 +19,18 @@ use crate::msg::{
     ListResponse, QueryMsg, ReceiveMsg,
 };
 
-
 // Version info, for migration info
 const CONTRACT_NAME: &str = "crates.io:atomic-swap";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+
+/// Instantiation - default does not have any setup
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
-    _msg: InstantiateMsg,
+    deps  : DepsMut,
+    _env  : Env,
+    _info : MessageInfo,
+    _msg  : InstantiateMsg,
 ) -> StdResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     // No setup
@@ -37,30 +38,46 @@ pub fn instantiate(
 }
 
 
+/// Execute - similar to any Cw Contract - check which Msg it is and execute accordingly
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: ExecuteMsg,
+    deps : DepsMut,
+    env  : Env,
+    info : MessageInfo,
+    msg  : ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+
+        // create message
         ExecuteMsg::Create(msg) => {
             let sent_funds = info.funds.clone();
             execute_create(deps, env, info, msg, Balance::from(sent_funds))
         }
-        ExecuteMsg::Release { id, preimage } => execute_release(deps, env, id, preimage),
-        ExecuteMsg::Refund { id } => execute_refund(deps, env, id),
+
+        // release message
+        ExecuteMsg::Release {
+            id,
+            preimage
+        } => execute_release(deps, env, id, preimage),
+
+        // refund message (cancel transaction)
+        ExecuteMsg::Refund {
+            id
+        } => execute_refund(deps, env, id),
+
+        // receive message
         ExecuteMsg::Receive(msg) => execute_receive(deps, env, info, msg),
     }
 }
 
 
+/// Receive - contract receives the agreed upon swap tokens from another
+/// Hence, `this` is the receiver, and `other` is the sender.
 pub fn execute_receive(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    wrapper: Cw20ReceiveMsg,
+    deps    : DepsMut,
+    env     : Env,
+    info    : MessageInfo,
+    wrapper : Cw20ReceiveMsg,
 ) -> Result<Response, ContractError> {
     let msg: ReceiveMsg = from_binary(&wrapper.msg)?;
     let token = Cw20CoinVerified {
@@ -80,6 +97,7 @@ pub fn execute_receive(
 }
 
 
+/// Create tokens (???)
 pub fn execute_create(
     deps: DepsMut,
     env: Env,
@@ -128,6 +146,7 @@ pub fn execute_create(
 }
 
 
+/// Release - swap suceeds and can be released?
 pub fn execute_release(
     deps: DepsMut,
     env: Env,
@@ -158,6 +177,9 @@ pub fn execute_release(
 }
 
 
+/// Refund - cancel swap: since the swap is atomic by name, it implies that it either happens
+/// if both do what was agreed, or nothing will happen at all. Refund is therefore not 1-sided
+/// but it cancels for both ends.
 pub fn execute_refund(deps: DepsMut, env: Env, id: String) -> Result<Response, ContractError> {
     let swap = SWAPS.load(deps.storage, &id)?;
     // Anyone can try to refund, as long as the contract is expired
