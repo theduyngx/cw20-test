@@ -31,18 +31,24 @@ What this implies is you won't even need a Rust Cw20 source code to begin with! 
 
 ----------------
 ## Upload / Deploy (optional)
+   ```bash
+   # Compile
+   cwtools wasm build contracts/atomic-swap -o path/to/compiled
+   ```
+   * The first step to upload or deploy is to compile your contract (at top level of crate) into a compressed `.wasm` file. This is the file that can be deployed / uploaded onto the blockchain network. (In this example, we use atomic-swap contract.)
+   * `cwtools` will automatically optimize the file size for you with its `build` wasm operation. Full-size file is often large and unsuitable for the blockchain.
 
    ```bash
    # Upload
-   cwtools wasm upload [file_path] --env .env --input '{"name": "Eames", "symbol": "EAM", "decimals": 10, "initial_balances": [{"amount: "20000", "address": "your_addr"}]} '
+   cwtools wasm upload path/to/compiled/atomic-swap.wasm --env .env --input '{"name": "Eames", "symbol": "EAM", "decimals": 10, "initial_balances": [{"amount: "20000", "address": "your_addr"}]} '
 
    # Deploy
-   cwtools wasm deploy eames-token --env .env --input '{"name": "Eames", "symbol": "EAM", "decimals": 10, "initial_balances": [{"amount: "20000", "address": "your_addr"}]}'
+   cwtools wasm deploy path/to/compiled/atomic-swap.wasm --env .env --input '{"name": "Eames", "symbol": "EAM", "decimals": 10, "initial_balances": [{"amount: "20000", "address": "your_addr"}]}'
    ```
 
    * The upload process is to upload your smart contract and obtain the `.wasm` file to run on the network. That said, you won't be required to upload this unless you make internal logic changes to the Cw20 base.
    * Deploy is simply upload and instantiation in one.
-   * `eames-token` is just the name of the smart contract in `contract.rs`. It is a positional, so no need for tags.
+   * With this process, a brand new smart contract source code has been pushed to the network and ready to be used.
 
 ----------------
 ## Execute & Query
