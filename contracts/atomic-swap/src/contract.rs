@@ -1,220 +1,278 @@
-use crate::msg::MigrateMsg;
-
+#[cfg(not(feature = "library"))]
+use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    Deps, DepsMut, Env, MessageInfo, Response, StdResult, Binary, to_binary, entry_point
+    Addr, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Response,
+    StdResult, SubMsg, WasmMsg, from_binary, to_binary
 };
+use sha2::{Digest, Sha256};
+
+use cw_storage_plus::Bound;
 use cw2::set_contract_version;
-use cw20_base::allowances::{
-    execute_transfer_from, execute_send_from, execute_burn_from,
-    execute_increase_allowance, execute_decrease_allowance, query_allowance
-};
-use cw20_base::contract::{
-    execute_transfer, execute_burn, execute_send, execute_mint, execute_update_marketing, execute_upload_logo, 
-    query_balance, query_token_info, query_minter, query_marketing_info, query_download_logo, execute_update_minter
-};
-use cw20_base::ContractError;
-use cw20_base::enumerable::{query_owner_allowances, query_all_accounts, query_spender_allowances};
-use cw20_base::msg::{
-    InstantiateMsg, ExecuteMsg, QueryMsg
+use cw20::{
+    Balance, Cw20Coin, Cw20CoinVerified, Cw20ExecuteMsg, Cw20ReceiveMsg
 };
 
-const CONTRACT_NAME: &str = "crates.io::eames-token";
+use crate::error::ContractError;
+use crate::state::{all_swap_ids, AtomicSwap, SWAPS};
+use crate::msg::{
+    is_valid_name, BalanceHuman, CreateMsg, DetailsResponse, ExecuteMsg, InstantiateMsg,
+    ListResponse, QueryMsg, ReceiveMsg,
+};
+
+
+// Version info, for migration info
+const CONTRACT_NAME: &str = "crates.io:atomic-swap";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-
-/// Instantiate - calling cw20_base instantiation
-/// # Arguments
-/// * `deps` - mutable dependency which has the storage (state) of the chain
-/// * `env`  - environment variables which include block information
-/// * `info` - message info, such as sender/initiator and denomination
-/// * `msg`  - the instantiate message
-/// # Returns
-/// * the instantiate response on Ok
-/// * the error type on Err
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps : DepsMut,
-    env  : Env,
-    info : MessageInfo,
-    msg  : InstantiateMsg
-) -> Result<Response, ContractError> {
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    _msg: InstantiateMsg,
+) -> StdResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    cw20_base::contract::instantiate(deps, env, info, msg)
+    // No setup
+    Ok(Response::default())
 }
 
 
-/// Execute - calling cw20_base execute functions. Arguments are identical to that of Instantiate.
-/// # Arguments
-/// * `deps` - mutable dependency which has the storage (state) of the chain
-/// * `env`  - environment variables which include block information
-/// * `info` - message info, such as sender/initiator and denomination
-/// * `msg`  - the execute message
-/// # Returns
-/// * the execute response on Ok
-/// * the error type on Err
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps : DepsMut,
-    env  : Env,
-    info : MessageInfo,
-    msg  : ExecuteMsg
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    // pattern matching message type
     match msg {
-
-        // transfer action (initiator is sender)
-        ExecuteMsg::Transfer {
-            recipient,
-            amount
-        } => execute_transfer(deps, env, info, recipient, amount),
-
-        // burn action (initiator's amount will get burnt)
-        ExecuteMsg::Burn {
-            amount
-        } => execute_burn(deps, env, info, amount),
-
-        // send action - transfer with an extra message as instruction for the smart contract
-        ExecuteMsg::Send {
-            contract,
-            amount,
-            msg
-        } => execute_send(deps, env, info, contract, amount, msg),
-
-        // increase allowance action - initiator increases another contract's total allowance to spend
-        // on behalf of them
-        ExecuteMsg::IncreaseAllowance {
-            spender,
-            amount, 
-            expires 
-        } => execute_increase_allowance(deps, env, info, spender, amount, expires),
-        
-        // decrease allownace action (similar to increase)
-        ExecuteMsg::DecreaseAllowance { 
-            spender, 
-            amount, 
-            expires 
-        } => execute_decrease_allowance(deps, env, info, spender, amount, expires),
-
-        // transfer from action - uses allowance to let another transfer their money
-        // as such, sender (initiator) is the allowed party, and owner is the true token owner
-        ExecuteMsg::TransferFrom {
-            owner,
-            recipient,
-            amount
-        } => execute_transfer_from(deps, env, info, owner, recipient, amount),
-
-        // send from action - similar to transfer from but with send
-        ExecuteMsg::SendFrom {
-            owner,
-            contract,
-            amount,
-            msg 
-        } => execute_send_from(deps, env, info, owner, contract, amount, msg),
-
-        // burn from action - similar to transfer from but with burn
-        ExecuteMsg::BurnFrom { 
-            owner, 
-            amount 
-        } => execute_burn_from(deps, env, info, owner, amount),
-
-        // mint action - the recipient is one to get the award with amount
-        ExecuteMsg::Mint { 
-            recipient, 
-            amount 
-        } => execute_mint(deps, env, info, recipient, amount),
-
-        // update minter (probably to update the forefront minter on the block)
-        ExecuteMsg::UpdateMinter {
-            new_minter
-        } => execute_update_minter(deps, env, info, new_minter),
-
-        // marketing stuffs (not important)
-        ExecuteMsg::UpdateMarketing {
-            project,
-            description,
-            marketing
-        } => execute_update_marketing(deps, env, info, project, description, marketing),
-
-        ExecuteMsg::UploadLogo(logo) => execute_upload_logo(deps, env, info, logo),
+        ExecuteMsg::Create(msg) => {
+            let sent_funds = info.funds.clone();
+            execute_create(deps, env, info, msg, Balance::from(sent_funds))
+        }
+        ExecuteMsg::Release { id, preimage } => execute_release(deps, env, id, preimage),
+        ExecuteMsg::Refund { id } => execute_refund(deps, env, id),
+        ExecuteMsg::Receive(msg) => execute_receive(deps, env, info, msg),
     }
 }
 
 
-/// Query - calling cw20_base functions.
-/// # Arguments
-/// * `deps` - mutable dependency which has the storage (state) of the chain
-/// * `_env` - environment variables which include block information
-/// * `msg`  - the execute message
-/// # Returns
-/// Serialized binary representing the portable queried response
+pub fn execute_receive(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    wrapper: Cw20ReceiveMsg,
+) -> Result<Response, ContractError> {
+    let msg: ReceiveMsg = from_binary(&wrapper.msg)?;
+    let token = Cw20CoinVerified {
+        address: info.sender,
+        amount: wrapper.amount,
+    };
+    // we need to update the info... so the original sender is the one authorizing with these tokens
+    let orig_info = MessageInfo {
+        sender: deps.api.addr_validate(&wrapper.sender)?,
+        funds: info.funds,
+    };
+    match msg {
+        ReceiveMsg::Create(create) => {
+            execute_create(deps, env, orig_info, create, Balance::Cw20(token))
+        }
+    }
+}
+
+
+pub fn execute_create(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: CreateMsg,
+    balance: Balance,
+) -> Result<Response, ContractError> {
+    if !is_valid_name(&msg.id) {
+        return Err(ContractError::InvalidId {});
+    }
+
+    // this ignores 0 value coins, must have one or more with positive balance
+    if balance.is_empty() {
+        return Err(ContractError::EmptyBalance {});
+    }
+
+    // Ensure this is 32 bytes hex-encoded, and decode
+    let hash = parse_hex_32(&msg.hash)?;
+
+    if msg.expires.is_expired(&env.block) {
+        return Err(ContractError::Expired {});
+    }
+
+    let recipient = deps.api.addr_validate(&msg.recipient)?;
+
+    let swap = AtomicSwap {
+        hash: Binary(hash),
+        recipient,
+        source: info.sender,
+        expires: msg.expires,
+        balance,
+    };
+
+    // Try to store it, fail if the id already exists (unmodifiable swaps)
+    SWAPS.update(deps.storage, &msg.id, |existing| match existing {
+        None => Ok(swap),
+        Some(_) => Err(ContractError::AlreadyExists {}),
+    })?;
+
+    let res = Response::new()
+        .add_attribute("action", "create")
+        .add_attribute("id", msg.id)
+        .add_attribute("hash", msg.hash)
+        .add_attribute("recipient", msg.recipient);
+    Ok(res)
+}
+
+
+pub fn execute_release(
+    deps: DepsMut,
+    env: Env,
+    id: String,
+    preimage: String,
+) -> Result<Response, ContractError> {
+    let swap = SWAPS.load(deps.storage, &id)?;
+    if swap.is_expired(&env.block) {
+        return Err(ContractError::Expired {});
+    }
+
+    let hash = Sha256::digest(&parse_hex_32(&preimage)?);
+    if hash.as_slice() != swap.hash.as_slice() {
+        return Err(ContractError::InvalidPreimage {});
+    }
+
+    // Delete the swap
+    SWAPS.remove(deps.storage, &id);
+
+    // Send all tokens out
+    let msgs = send_tokens(&swap.recipient, swap.balance)?;
+    Ok(Response::new()
+        .add_submessages(msgs)
+        .add_attribute("action", "release")
+        .add_attribute("id", id)
+        .add_attribute("preimage", preimage)
+        .add_attribute("to", swap.recipient.to_string()))
+}
+
+
+pub fn execute_refund(deps: DepsMut, env: Env, id: String) -> Result<Response, ContractError> {
+    let swap = SWAPS.load(deps.storage, &id)?;
+    // Anyone can try to refund, as long as the contract is expired
+    if !swap.is_expired(&env.block) {
+        return Err(ContractError::NotExpired {});
+    }
+
+    // We delete the swap
+    SWAPS.remove(deps.storage, &id);
+
+    let msgs = send_tokens(&swap.source, swap.balance)?;
+    Ok(Response::new()
+        .add_submessages(msgs)
+        .add_attribute("action", "refund")
+        .add_attribute("id", id)
+        .add_attribute("to", swap.source.to_string()))
+}
+
+
+fn parse_hex_32(data: &str) -> Result<Vec<u8>, ContractError> {
+    match hex::decode(data) {
+        Ok(bin) => {
+            if bin.len() == 32 {
+                Ok(bin)
+            } else {
+                Err(ContractError::InvalidHash(bin.len() * 2))
+            }
+        }
+        Err(e) => Err(ContractError::ParseError(e.to_string())),
+    }
+}
+
+
+fn send_tokens(to: &Addr, amount: Balance) -> StdResult<Vec<SubMsg>> {
+    if amount.is_empty() {
+        Ok(vec![])
+    } else {
+        match amount {
+            Balance::Native(coins) => {
+                let msg = BankMsg::Send {
+                    to_address: to.into(),
+                    amount: coins.into_vec(),
+                };
+                Ok(vec![SubMsg::new(msg)])
+            }
+            Balance::Cw20(coin) => {
+                let msg = Cw20ExecuteMsg::Transfer {
+                    recipient: to.into(),
+                    amount: coin.amount,
+                };
+                let exec = WasmMsg::Execute {
+                    contract_addr: coin.address.into(),
+                    msg: to_binary(&msg)?,
+                    funds: vec![],
+                };
+                Ok(vec![SubMsg::new(exec)])
+            }
+        }
+    }
+}
+
+
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+
+        QueryMsg::List {
+            start_after,
+            limit
+        } => to_binary(&query_list(deps, start_after, limit)?),
+
+        QueryMsg::Details {
+            id
+        } => to_binary(&query_details(deps, id)?),
+    }
+}
+
+
+fn query_details(deps: Deps, id: String) -> StdResult<DetailsResponse> {
+    let swap = SWAPS.load(deps.storage, &id)?;
+
+    // Convert balance to human balance
+    let balance_human = match swap.balance {
+        Balance::Native(coins) => BalanceHuman::Native(coins.into_vec()),
+        Balance::Cw20(coin) => BalanceHuman::Cw20(Cw20Coin {
+            address: coin.address.into(),
+            amount: coin.amount,
+        }),
+    };
+
+    let details = DetailsResponse {
+        id,
+        hash: hex::encode(swap.hash.as_slice()),
+        recipient: swap.recipient.into(),
+        source: swap.source.into(),
+        expires: swap.expires,
+        balance: balance_human,
+    };
+    Ok(details)
+}
+
+
+// Settings for pagination
+const MAX_LIMIT: u32 = 30;
+const DEFAULT_LIMIT: u32 = 10;
+
+fn query_list(
     deps: Deps,
-    _env: Env,
-    msg : QueryMsg
-) -> StdResult<Binary> {
-    match msg {
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<ListResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after.as_ref().map(|s| Bound::exclusive(s.as_str()));
 
-        // querying balance of a particular address
-        QueryMsg::Balance { 
-            address 
-        } => to_binary(&query_balance(deps, address)?),
-        
-        // querying the token info on the blockchain
-        QueryMsg::TokenInfo {
-        } => to_binary(&query_token_info(deps)?),
-
-        // querying the forefront minter (probably)
-        QueryMsg::Minter {
-        } => to_binary(&query_minter(deps)?),
-
-        // querying a spender's allowance with a particular owner
-        QueryMsg::Allowance {
-            owner,
-            spender
-        } => to_binary(&query_allowance(deps, owner, spender)?),
-
-        // querying all allownaces from a particular owner
-        QueryMsg::AllAllowances {
-            owner,
-            start_after,
-            limit
-        } => to_binary(&query_owner_allowances(deps, owner, start_after, limit)?),
-
-        // querying all allowances of a particular spender
-        QueryMsg::AllSpenderAllowances {
-            spender,
-            start_after,
-            limit
-        } => to_binary(&query_spender_allowances(deps, spender, start_after, limit)?),
-
-        // querying all accounts with stamp and limit on the blockchain
-        QueryMsg::AllAccounts {
-            start_after,
-            limit
-        } => to_binary(&query_all_accounts(deps, start_after, limit)?),
-
-        // querying marketing information (not important)
-        QueryMsg::MarketingInfo {
-        } => to_binary(&query_marketing_info(deps)?),
-
-        QueryMsg::DownloadLogo {
-        } => to_binary(&query_download_logo(deps)?),
-    }
-}
-
-
-/// Migrate - contract migration; allows contract to have its ID changed (internal logic of contract
-/// without having to create a new one. CosmWasm, unlike Ethereum - most contracts implement the same
-/// standard (i.e. Cw20) so no need to upload the whole thing (same standard - same core logic).
-/// # Arguments
-/// * `_deps` - mutable dependency which has the storage (state) of the chain
-/// * `_env`  - environment variables which include block information
-/// * `_msg`  - the execute message
-/// # Returns
-/// * the execute response on Ok
-/// * the error type on Err
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
-    Ok(Response::default())
+    Ok(ListResponse {
+        swaps: all_swap_ids(deps.storage, start, limit)?,
+    })
 }
