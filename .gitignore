@@ -2,3 +2,5 @@
 .vscode
 artifacts
 input.txt
+cwtools/dist
+cwtools/node_modules
