@@ -1,9 +1,5 @@
 /*
-Smart contract for token atomic swap on the CosmWasm network. Instantiation for atomic swap does not inherently
-have any minter mechanism and whatnot. Execution, however, requires a different set of functionalities, including
-create (to create a swap with another recipient), release (to let the other receive your token), refund (to
-cancel the swap and retrieve the tokens), receive (to fislow control on the receiving end).
-
+Smart contract for token atomic swap on the CosmWasm network.
 Mechanism: the atomic swap starts with initiator first sending a certain amount of tokens onto the atomic swap 
 smart contract, and other end will receive: "Send this id this amount of your coin in exchange for said id's amount 
 of sent funds before this expiration".
@@ -12,15 +8,19 @@ of sent funds before this expiration".
     (which will be locked on the contract until any other end passes this hash in to release and confirm swap), and
     set an expiration.
 
--   Release: Before the timeout, anyone qualified can, likewise, simply copy the initiator, or original recipient's,
-    hash and similarly create a swap offer to the original recipient with the same hash.
+-   Release: Before the timeout, anyone qualified can, likewise, simply copy the initiator's hash and similarly
+    create a swap offer to the initiator with the same hash.
     *  At this point, tokens from both parties are locked on the smart contract. By pubicizing the preimage, the 
        initiator has enabled both parties to finally be able to release each other's tokens with said preimage.
-    *  The name release refers to releasing the lock on smart contract for the original recipient's sent fund. This 
+    *  The term 'release' refers to releasing the lock on smart contract for initiator's sent fund. This 
        is the rationale behind the name Hash TimeOut Lock Contract (HTLC) for atomic swaps.
 
 -   Expiration: After the timeout, if no release has been executed, anyone on the network (though usually it is the
     original reipient) can refund the locked funds (now no long locked) to the recipient.
+
+With the current implementation, there are a few weaknesses: first, a smart contract can only create a single swap
+at a time. Second, the initiator cannot ask for a refund unless the swap has fully expired (should this really be
+the case, like with staking?).
 */
 
 #[cfg(not(feature = "library"))]
@@ -119,39 +119,6 @@ pub fn execute(
 }
 
 
-/// Receive - contract receives the agreed upon swap tokens from another.
-/// Hence, `this` is the receiver, and `other` is the sender.
-/// # Arguments
-/// * `deps`    - mutable dependency which has the storage (state) of the chain
-/// * `env`     - environment variables which include block information
-/// * `info`    - message info, such as sender/initiator and denomination
-/// * `wrapper` - the Cw20 receive message (including a sender, amount, and msg)
-///               it is wrapped in binary (as it appears so)
-/// # Returns
-/// * the execute response
-pub fn execute_receive(
-    deps    : DepsMut,
-    env     : Env,
-    info    : MessageInfo,
-    wrapper : Cw20ReceiveMsg,
-) -> Result<Response, ContractError> {
-    let unwrapped: ReceiveMsg = from_binary(&wrapper.msg)?;
-    let token = Cw20CoinVerified {
-        address: info.sender,
-        amount : wrapper.amount,
-    };
-    // we need to update the info... so the original sender is the one authorizing with these tokens
-    let org_info = MessageInfo {
-        sender : deps.api.addr_validate(&wrapper.sender)?,
-        funds  : info.funds,
-    };
-    // we unwrap the wrapper message such that we can call create again
-    // the reason why we want to call create is ...
-    let ReceiveMsg::Create(msg) = unwrapped;
-    execute_create(deps, env, org_info, msg, Balance::Cw20(token))
-}
-
-
 /// Create a swap - the message info will include the original initiator.
 /// # Arguments
 /// * `deps`    - mutable dependency which has the storage (state) of the chain
@@ -213,6 +180,39 @@ pub fn execute_create(
         .add_attribute("hash", msg.hash)
         .add_attribute("recipient", msg.recipient);
     Ok(res)
+}
+
+
+/// Receive - contract receives the agreed upon swap tokens from another.
+/// Hence, `this` is the receiver, and `other` is the sender.
+/// # Arguments
+/// * `deps`    - mutable dependency which has the storage (state) of the chain
+/// * `env`     - environment variables which include block information
+/// * `info`    - message info, such as sender/initiator and denomination
+/// * `wrapper` - the Cw20 receive message (including a sender, amount, and msg)
+///               it is wrapped in binary (as it appears so)
+/// # Returns
+/// * the execute response
+pub fn execute_receive(
+    deps    : DepsMut,
+    env     : Env,
+    info    : MessageInfo,
+    wrapper : Cw20ReceiveMsg,
+) -> Result<Response, ContractError> {
+    let unwrapped: ReceiveMsg = from_binary(&wrapper.msg)?;
+    let token = Cw20CoinVerified {
+        address: info.sender,
+        amount : wrapper.amount,
+    };
+    // we need to update the info... so the original sender is the one authorizing with these tokens
+    let org_info = MessageInfo {
+        sender : deps.api.addr_validate(&wrapper.sender)?,
+        funds  : info.funds,
+    };
+    // we unwrap the wrapper message such that we can call create again
+    // the reason why we want to call create is ...
+    let ReceiveMsg::Create(msg) = unwrapped;
+    execute_create(deps, env, org_info, msg, Balance::Cw20(token))
 }
 
 
@@ -281,6 +281,7 @@ pub fn execute_refund(
     // We delete the swap
     SWAPS.remove(deps.storage, &id);
 
+    // and send the tokens back to the source (initiator)
     let msgs = send_tokens(&swap.source, swap.balance)?;
     Ok(Response::new()
         .add_submessages(msgs)
@@ -289,26 +290,42 @@ pub fn execute_refund(
         .add_attribute("to", swap.source.to_string()))
 }
 
-/// 
+/// Parse hex 32-byte string to ensure that it is of correct format
+/// # Arguments
+/// * `data` - the 32-byte string
+/// # Returns
+/// * array of bytes (u8)
+/// * the error type Err
 fn parse_hex_32(data: &str) -> Result<Vec<u8>, ContractError> {
     match hex::decode(data) {
-        Ok(bin) => {
-            if bin.len() == 32 {
-                Ok(bin)
-            } else {
-                Err(ContractError::InvalidHash(bin.len() * 2))
-            }
-        }
+        Ok(bin) => 
+            if bin.len() == 32 { Ok(bin) } 
+            else { Err(ContractError::InvalidHash(bin.len() * 2)) }
         Err(e) => Err(ContractError::ParseError(e.to_string())),
     }
 }
 
 
+/// Get the required messages for sending a specific amount of token already on the contract to the specified
+/// address. This is used when releasing the locked tokens, or refunding back to initiator.
+/// # Arguments
+/// * `to`     - the specified destination address to send tokens to
+/// * `amount` - the balance on smart contract
+/// # Returns
+/// * array of bytes (u8)
+/// * the error type Err
 fn send_tokens(to: &Addr, amount: Balance) -> StdResult<Vec<SubMsg>> {
+    // sending zero amount
     if amount.is_empty() {
         Ok(vec![])
-    } else {
+    }
+    // sending some other amount
+    else {
         match amount {
+
+            // native coin will simply use the standard Bank Send message (it is compatible to it)
+            // honestly writing a smart contract from scratch seems absolutely confusing due to all
+            // of these seemingly unrelated things that are supposed to be related, somehow
             Balance::Native(coins) => {
                 let msg = BankMsg::Send {
                     to_address: to.into(),
@@ -316,6 +333,8 @@ fn send_tokens(to: &Addr, amount: Balance) -> StdResult<Vec<SubMsg>> {
                 };
                 Ok(vec![SubMsg::new(msg)])
             }
+
+            // Cw20 coin (what even happened here?)
             Balance::Cw20(coin) => {
                 let msg = Cw20ExecuteMsg::Transfer {
                     recipient: to.into(),
@@ -333,15 +352,25 @@ fn send_tokens(to: &Addr, amount: Balance) -> StdResult<Vec<SubMsg>> {
 }
 
 
+/// Query - there are 2 types of queries: listing and retrieving details of a specified smart contract
+/// # Arguments
+/// * `deps` - mutable dependency which has the storage (state) of the chain
+/// * `_env` - environment variables which include block information
+/// * `msg`  - the query message
+/// # Returns
+/// * array of bytes (u8)
+/// * the error type Err
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
 
+        // listing is retrieving the list of swaps starting after a specific point with a limit
         QueryMsg::List {
             start_after,
             limit
         } => to_binary(&query_list(deps, start_after, limit)?),
 
+        // details is simply the details of a swap, indexed by smart contract's id
         QueryMsg::Details {
             id
         } => to_binary(&query_details(deps, id)?),
@@ -349,7 +378,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 
+/// Querying details of a swap - each smart contract id corresponds to exactly 1 swap.
 fn query_details(deps: Deps, id: String) -> StdResult<DetailsResponse> {
+    // load is a mapping method that takes in a storage and a key
+    // in this case, the id is the smart contract's id of the initiator, and value being AtomicSwap
+    // SWAPS = Map<id:String, pending:AtomicSwap>
     let swap = SWAPS.load(deps.storage, &id)?;
 
     // Convert balance to human balance
@@ -361,6 +394,7 @@ fn query_details(deps: Deps, id: String) -> StdResult<DetailsResponse> {
         }),
     };
 
+    // return the details of the swap
     let details = DetailsResponse {
         id,
         hash: hex::encode(swap.hash.as_slice()),
@@ -377,10 +411,11 @@ fn query_details(deps: Deps, id: String) -> StdResult<DetailsResponse> {
 const MAX_LIMIT: u32 = 30;
 const DEFAULT_LIMIT: u32 = 10;
 
+/// Querying a list of swaps
 fn query_list(
-    deps: Deps,
-    start_after: Option<String>,
-    limit: Option<u32>,
+    deps        : Deps,
+    start_after : Option<String>,
+    limit       : Option<u32>,
 ) -> StdResult<ListResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
     let start = start_after.as_ref().map(|s| Bound::exclusive(s.as_str()));

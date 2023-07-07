@@ -40,7 +40,8 @@ pub enum ContractError {
     #[error("Expired atomic swap")]
     Expired,
 
-    /// Duplicate swap offer creation error
+    /// Smart contract is already in another SWAP - with this implementation, there can only be
+    /// a single swap for a smart contract at a time
     #[error("Atomic swap already exists")]
     AlreadyExists,
 }
