@@ -1,3 +1,10 @@
+/*
+Smart contract for token atomic swap on the CosmWasm network. Instantiation for atomic swap does not inherently
+have any minter mechanism and whatnot. Execution, however, requires a different set of functionalities, including
+create (to create a swap with another recipient), release (to let the other receive your token), refund (to
+cancel the swap and retrieve the tokens), receive (to flow control on the receiving end).
+*/
+
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -25,6 +32,9 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 
 /// Instantiation - default does not have any setup
+/// An atomic swap contract should only be seen as an extension to a full-fledged Cw20 contract.
+/// This is because it should only be used for the swapping itself, rather than handling a lot
+/// of executions and instantiation logic.
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps  : DepsMut,
@@ -97,13 +107,13 @@ pub fn execute_receive(
 }
 
 
-/// Create tokens (???)
+/// Create a swap
 pub fn execute_create(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: CreateMsg,
-    balance: Balance,
+    deps    : DepsMut,
+    env     : Env,
+    info    : MessageInfo,
+    msg     : CreateMsg,
+    balance : Balance,
 ) -> Result<Response, ContractError> {
     if !is_valid_name(&msg.id) {
         return Err(ContractError::InvalidId {});

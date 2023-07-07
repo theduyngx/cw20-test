@@ -8,12 +8,12 @@ use cw20::{Balance, Expiration};
 #[cw_serde]
 pub struct AtomicSwap {
     /// This is the sha-256 hash of the preimage
-    pub hash: Binary,
-    pub recipient: Addr,
-    pub source: Addr,
-    pub expires: Expiration,
+    pub hash      : Binary,
+    pub recipient : Addr,
+    pub source    : Addr,
+    pub expires   : Expiration,
     /// Balance in native tokens, or cw20 token
-    pub balance: Balance,
+    pub balance   : Balance,
 }
 
 impl AtomicSwap {
@@ -36,6 +36,8 @@ pub fn all_swap_ids<'a>(
         .collect()
 }
 
+
+/// -------------------- UNIT TESTS -------------------- ///
 #[cfg(test)]
 mod tests {
     use super::*;

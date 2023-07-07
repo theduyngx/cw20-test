@@ -1,11 +1,23 @@
+/*
+The request messages sent to the blockchain server to an atomic swap smart contract.
+*/
+
 use cosmwasm_schema::{cw_serde, QueryResponses};
 
 use cosmwasm_std::Coin;
 use cw20::{Cw20Coin, Cw20ReceiveMsg, Expiration};
 
+/// Instantiate message for the atomic swap does not inherently require anything other than
+/// its own existence (at least for now). So we won't need to pass in anything.
 #[cw_serde]
 pub struct InstantiateMsg {}
 
+
+/// The Execute message. For now, it includes:
+/// * `Create`  - creating a swap request
+/// * `Release` - sends agreed upon tokens to the recipient
+/// * `Refund`  - cancels the swap and retrieve all remaining tokens
+/// * `Receive` - Handling the receiving end
 #[cw_serde]
 pub enum ExecuteMsg {
     Create(CreateMsg),
@@ -20,7 +32,9 @@ pub enum ExecuteMsg {
     Refund {
         id: String,
     },
-    /// This accepts a properly-encoded ReceiveMsg from a cw20 contract
+    /// Receive is required in any Cw20 implementation in order to manage the Send/Receive flow. In which
+    /// the latter will have to ensure the publicly accessible info.sender - which cannot be faked, matches
+    /// the contract it expects to be receiving from. Receive will also not allow arbitrary addresses.
     Receive(Cw20ReceiveMsg),
 }
 
