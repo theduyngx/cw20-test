@@ -286,7 +286,7 @@ pub fn execute_refund(
         .add_attribute("to", swap.source.to_string()))
 }
 
-/// Parse hex 32-byte string to ensure that it is of correct format
+/// Parse hex 32-byte string to ensure that it is of correct format. Helper function so private.
 /// # Arguments
 /// * `data` - the 32-byte string
 /// # Returns
@@ -375,6 +375,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 
 /// Querying details of a swap; query by its human-readable id.
+/// # Arguments
+/// * `deps` - mutable dependency which has the storage (state) of the chain
+/// * `id`   - swap id
+/// # Returns
+///   The details of the swap
 fn query_details(deps: Deps, id: String) -> StdResult<DetailsResponse> {
     // load is a mapping method that takes in a storage and a key
     // in this case, the id is the swap id named by the initiator, and value being AtomicSwap
@@ -408,6 +413,12 @@ const MAX_LIMIT: u32 = 30;
 const DEFAULT_LIMIT: u32 = 10;
 
 /// Querying a list of swaps
+/// # Arguments
+/// * `deps`        - mutable dependency which has the storage (state) of the chain
+/// * `start_after` - the starting point of query
+/// * `limit`       - the list size limit
+/// # Returns
+///   The list of responses
 fn query_list(
     deps        : Deps,
     start_after : Option<String>,

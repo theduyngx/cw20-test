@@ -77,8 +77,8 @@ already existed contract on the network without having to upload your code, effe
   }'
   ```
 
-  * The upload process is to upload your smart contract and obtain the `.wasm` file to run on the network. That said, you won'
-    required to upload this unless you make internal logic changes to the Cw20 base.
+  * The upload process is to upload your smart contract and obtain the `.wasm` file to run on the network. That said, you won't
+    be required to upload this unless you make internal logic changes to the Cw20 base.
   * After uploading, a new smart contract ID (the simplified `code-id` discussed above) will be returned. You will use this id
     to instantiate your smart contract on the chain. This means that instead of borrowing some other contract's id, you are
     instead using your own true, new provided one from the uploaded source code.
@@ -110,7 +110,7 @@ Here are some examples for the swap atomic smart contract:
       "recipient": "...", 
       "expires": {"at_height": ...}
     }
-  }'
+  }' --amount "120023"
   ```
   * `hashed_ref` is the hashed reference to the instantiation smart contract you had uploaded. Unlike the basic implementation,
     we had to upload this smart contract to the network, and in turn, we have created a brand new smart contract with, likewise,
@@ -119,6 +119,8 @@ Here are some examples for the swap atomic smart contract:
     simple, human-readable identifiers. Even if the id had already existed, we would just get an error.
   * `hash` is the hashed value of the preimage created by the initiator. The initiator, before creating a swap offer, will store
     their own secret private key, which will be hashed and passed here.
-  * `recipient` is the original recipient, or initiator's, wallet's address. If the offer is approved, the recipient receives
-    the token, and their agreed upon balance on the network will also be released to other end.
-  * `expires` is the expiration. In this example, we use `at_height`, which represents block height expiration. 
+  * `recipient` is the recipient's wallet address. If the offer is approved, the recipient receives the token, and their agreed 
+    upon balance on the network will also be released to the initiator. Remember that atomic swap is P2P.
+  * `expires` is the expiration. In this example, we use `at_height`, which represents block height expiration.
+  * `--amount` takes in an integer string. It is the amount that this initiator is asking to atomically swap
+    for with the specified `recipient` above.

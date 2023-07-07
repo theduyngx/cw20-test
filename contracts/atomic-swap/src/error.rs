@@ -5,6 +5,7 @@ Error types to handle failed smart contract operations.
 use cosmwasm_std::StdError;
 use thiserror::Error;
 
+/// Atomic swap smart contract error type
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     /// Standard error (?)

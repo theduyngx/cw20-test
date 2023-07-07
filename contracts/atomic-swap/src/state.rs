@@ -50,10 +50,10 @@ pub fn all_swap_ids<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use cosmwasm_std::testing::MockStorage;
     use cosmwasm_std::Binary;
 
+    /// Test asserting no swap ids mean storage swap is empty
     #[test]
     fn test_no_swap_ids() {
         let storage = MockStorage::new();
@@ -71,6 +71,7 @@ mod tests {
         }
     }
 
+    /// Testing a filled storage all of its swap ids
     #[test]
     fn test_all_swap_ids() {
         let mut storage = MockStorage::new();

@@ -3,15 +3,14 @@ The request messages sent to the blockchain server to an atomic swap smart contr
 */
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
-
 use cosmwasm_std::Coin;
 use cw20::{Cw20Coin, Cw20ReceiveMsg, Expiration};
+
 
 /// Instantiate message for the atomic swap does not inherently require anything other than
 /// its own existence (at least for now). So we won't need to pass in anything.
 #[cw_serde]
 pub struct InstantiateMsg {}
-
 
 /// The Execute message. For now, it includes:
 /// * `Create`  - creating a swap request
@@ -62,10 +61,7 @@ pub struct CreateMsg {
 /// Check whether human-readable smart contract's id is valid or not
 pub fn is_valid_name(name: &str) -> bool {
     let bytes = name.as_bytes();
-    if bytes.len() < 3 || bytes.len() > 20 {
-        return false;
-    }
-    true
+    ! (bytes.len() < 3 || bytes.len() > 20)
 }
 
 /// Query message
@@ -84,12 +80,14 @@ pub enum QueryMsg {
     Details { id: String },
 }
 
+/// The list response, which is essentially just a vector of swap ids
 #[cw_serde]
 pub struct ListResponse {
     /// List all open swap ids
     pub swaps: Vec<String>,
 }
 
+/// The individual swap detail response
 #[cw_serde]
 pub struct DetailsResponse {
     /// Id of this swap
