@@ -2,7 +2,7 @@
 Smart contract for token atomic swap on the CosmWasm network.
 Mechanism: the atomic swap starts with initiator first sending a certain amount of tokens onto the atomic swap 
 smart contract, and other end will receive: "Send this id this amount of your coin in exchange for said id's amount 
-of sent funds before this expiration".
+of sent funds before this expiration". Remember that it is P2P, so we have a definitive sender and receipient.
 
 -   Create: the initiator will create a swap by providing with a preimage that will get hashed, and send some tokens 
     (which will be locked on the contract until any other end passes this hash in to release and confirm swap), and
@@ -16,11 +16,7 @@ of sent funds before this expiration".
        is the rationale behind the name Hash TimeOut Lock Contract (HTLC) for atomic swaps.
 
 -   Expiration: After the timeout, if no release has been executed, anyone on the network (though usually it is the
-    original reipient) can refund the locked funds (now no long locked) to the recipient.
-
-With the current implementation, there are a few weaknesses: first, a smart contract can only create a single swap
-at a time. Second, the initiator cannot ask for a refund unless the swap has fully expired (should this really be
-the case, like with staking?).
+    reipient) can refund the locked funds (now no long locked) to the other end.
 */
 
 #[cfg(not(feature = "library"))]
@@ -56,7 +52,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// # Arguments
 /// * `deps` - mutable dependency which has the storage (state) of the chain
 /// * `env`  - environment variables which include block information
-/// * `info` - message info, such as sender/initiator and denomination
+/// * `info` - initiator's information (including their address and balance)
 /// * `msg`  - the instantiate message
 /// # Returns
 ///   Default response
@@ -77,7 +73,7 @@ pub fn instantiate(
 /// # Arguments
 /// * `deps` - mutable dependency which has the storage (state) of the chain
 /// * `env`  - environment variables which include block information
-/// * `info` - message info, such as sender/initiator and denomination
+/// * `info` - initiator's information (including their address and balance)
 /// * `msg`  - the instantiate message
 /// # Returns
 /// * the execute response
@@ -113,17 +109,17 @@ pub fn execute(
         } => execute_refund(deps, env, id),
 
         // receive - handling receiving end
-        // think of it like a TCP connection where recipient needs to do a lot of verifications and checks
+        // think of it like a TCP connection where receiver needs to do a lot of verifications and checks
         ExecuteMsg::Receive(msg) => execute_receive(deps, env, info, msg),
     }
 }
 
 
-/// Create a swap - the message info will include the original initiator.
+/// Create a swap - the message info will include the swap id named by initiator when creating the offer.
 /// # Arguments
 /// * `deps`    - mutable dependency which has the storage (state) of the chain
 /// * `env`     - environment variables which include block information
-/// * `info`    - message info, such as sender/initiator and denomination
+/// * `info`    - initiator's information (including their address and balance)
 /// * `msg`     - the create message
 /// * `balance` - the sent funds from initiator
 /// # Returns
@@ -161,8 +157,8 @@ pub fn execute_create(
     // create an atomic swap unit
     let swap = AtomicSwap {
         hash: Binary(hash),     // the preimage hash (initially stored in create msg)
-        recipient,              // the recipient smart contract (has to support atomic swap as well)
-        source: info.sender,    // the sender's smart contract (support atomic swap)
+        recipient,              // the recipient's smart contract
+        source: info.sender,    // the sender's smart contract
         expires: msg.expires,   // expiration
         balance,                // the balance which is sender's already sent funds on the contract
     };
@@ -188,7 +184,7 @@ pub fn execute_create(
 /// # Arguments
 /// * `deps`    - mutable dependency which has the storage (state) of the chain
 /// * `env`     - environment variables which include block information
-/// * `info`    - message info, such as sender/initiator and denomination
+/// * `info`    - initiator's information (including their address and balance)
 /// * `wrapper` - the Cw20 receive message (including a sender, amount, and msg)
 ///               it is wrapped in binary (as it appears so)
 /// # Returns
@@ -262,7 +258,7 @@ pub fn execute_release(
 /// # Arguments
 /// * `deps` - mutable dependency which has the storage (state) of the chain
 /// * `env`  - environment variables which include block information
-/// * `id`   - initiator's smart contract ID
+/// * `id`   - human-readable swap id
 /// # Returns
 /// * the execute response
 /// * the error type Err
@@ -370,7 +366,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             limit
         } => to_binary(&query_list(deps, start_after, limit)?),
 
-        // details is simply the details of a swap, indexed by smart contract's id
+        // details is simply the details of a swap, indexed by human-readable swap's id
         QueryMsg::Details {
             id
         } => to_binary(&query_details(deps, id)?),
@@ -378,11 +374,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 
-/// Querying details of a swap - each smart contract id corresponds to exactly 1 swap.
+/// Querying details of a swap; query by its human-readable id.
 fn query_details(deps: Deps, id: String) -> StdResult<DetailsResponse> {
     // load is a mapping method that takes in a storage and a key
-    // in this case, the id is the smart contract's id of the initiator, and value being AtomicSwap
-    // SWAPS = Map<id:String, pending:AtomicSwap>
+    // in this case, the id is the swap id named by the initiator, and value being AtomicSwap
+    // SWAPS = Map<swap_id:String, pending:AtomicSwap>
     let swap = SWAPS.load(deps.storage, &id)?;
 
     // Convert balance to human balance

@@ -1,7 +1,9 @@
 # Atomic Swaps
 
 **NOTE**: This is implemented by CosmWasm, source: https://github.com/CosmWasm/cw-tokens. Only comments and most
-documentations are added.
+documentations are added. That said, some codes will soon be modified by this repository's author to increase
+some flexiblity and adaptability. The goal is to make this as an extensible, and should be extended from by
+others, smart contract that is ready to be used by public.
 
 This is a contract that allows users to execute atomic swaps. It implements one side of an atomic swap. The 
 other side can be realized by an equivalent contract in the same blockchain or, typically, on a different 
