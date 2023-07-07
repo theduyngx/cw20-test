@@ -38,11 +38,13 @@ pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
 }
 
+/// Receive message is basically just the create message, for whatever reason
 #[cw_serde]
 pub enum ReceiveMsg {
     Create(CreateMsg),
 }
 
+/// The create message
 #[cw_serde]
 pub struct CreateMsg {
     /// id is a human-readable name for the swap to use later.
@@ -57,6 +59,7 @@ pub struct CreateMsg {
     pub expires: Expiration,
 }
 
+/// Check whether human-readable smart contract's id is valid or not
 pub fn is_valid_name(name: &str) -> bool {
     let bytes = name.as_bytes();
     if bytes.len() < 3 || bytes.len() > 20 {
@@ -65,6 +68,7 @@ pub fn is_valid_name(name: &str) -> bool {
     true
 }
 
+/// Query message
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {

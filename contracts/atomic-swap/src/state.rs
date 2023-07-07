@@ -1,10 +1,17 @@
+/*
+The atomic swap contract also keeps track of a state such that it can track all swap offers that
+are currently pending. If the swap offer has expired, it will get removed from the state. That
+said, one can still query the swap offer using block info, which would be permanent on the chain.
+*/
+
 use cosmwasm_schema::cw_serde;
-
 use cosmwasm_std::{Addr, Binary, BlockInfo, Order, StdResult, Storage};
-use cw_storage_plus::{Bound, Map};
 
+use cw_storage_plus::{Bound, Map};
 use cw20::{Balance, Expiration};
 
+
+/// Atomic swap offer representation.
 #[cw_serde]
 pub struct AtomicSwap {
     /// This is the sha-256 hash of the preimage
@@ -16,12 +23,14 @@ pub struct AtomicSwap {
     pub balance   : Balance,
 }
 
+/// Atomic swap can check itself whether it has expired or not with block info
 impl AtomicSwap {
     pub fn is_expired(&self, block: &BlockInfo) -> bool {
         self.expires.is_expired(block)
     }
 }
 
+/// The cache storage on the smart contract to keep track of swap offers
 pub const SWAPS: Map<&str, AtomicSwap> = Map::new("atomic_swap");
 
 /// This returns the list of ids for all active swaps
