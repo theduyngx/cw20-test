@@ -31,9 +31,9 @@ pub enum ExecuteMsg {
     Refund {
         id: String,
     },
-    /// Receive is required in any Cw20 implementation in order to manage the Send/Receive flow. In which
-    /// the latter will have to ensure the publicly accessible info.sender - which cannot be faked, matches
-    /// the contract it expects to be receiving from. Receive will also not allow arbitrary addresses.
+    /// Receive is required in any Cw20 implementation in order to manage the Send/Receive flow.
+    /// In this case, it will be called to verify that the other end has received the initiator's
+    /// message, and in atomic-swap will mirror create to also lock the tokens of recipient
     Receive(Cw20ReceiveMsg),
 }
 

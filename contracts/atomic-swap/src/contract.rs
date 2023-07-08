@@ -8,8 +8,10 @@ of sent funds before this expiration". Remember that it is P2P, so we have a def
     (which will be locked on the contract until any other end passes this hash in to release and confirm swap), and
     set an expiration.
 
--   Release: Before the timeout, anyone qualified can, likewise, simply copy the initiator's hash and similarly
+-   Receive: Before the timeout, anyone qualified can, likewise, simply copy the initiator's hash and similarly
     create a swap offer to the initiator with the same hash.
+
+-   Release:
     *  At this point, tokens from both parties are locked on the smart contract. By pubicizing the preimage, the 
        initiator has enabled both parties to finally be able to release each other's tokens with said preimage.
     *  The term 'release' refers to releasing the lock on smart contract for initiator's sent fund. This 
@@ -109,7 +111,7 @@ pub fn execute(
         } => execute_refund(deps, env, id),
 
         // receive - handling receiving end
-        // think of it like a TCP connection where receiver needs to do a lot of verifications and checks
+        // this is where the other end verifies that they want to do the swap
         ExecuteMsg::Receive(msg) => execute_receive(deps, env, info, msg),
     }
 }
@@ -179,8 +181,9 @@ pub fn execute_create(
 }
 
 
-/// Receive - contract receives the agreed upon swap tokens from another.
-/// Hence, `this` is the receiver, and `other` is the sender.
+/// Receive - contract receives the agreed upon swap tokens from another. Hence, `this` 
+/// is the receiver, and `other` is the sender. It is the mirror of create to also use
+/// the same hash to lock their tokens.
 /// # Arguments
 /// * `deps`    - mutable dependency which has the storage (state) of the chain
 /// * `env`     - environment variables which include block information
@@ -206,13 +209,13 @@ pub fn execute_receive(
         funds  : info.funds,
     };
     // we unwrap the wrapper message such that we can call create again
-    // the reason why we want to call create is ...
+    // we call create, which similarly locks the tokens and verfies the swap (after which we'll release)
     let ReceiveMsg::Create(msg) = unwrapped;
     execute_create(deps, env, org_info, msg, Balance::Cw20(token))
 }
 
 
-/// Release - swap suceeds and can be released
+/// Release - both ends have successfully locked their tokens with create-receive
 /// Since this is release phase, it can only be called when the preimage has indeed been publicized,
 /// which only occurs when both parties have locked their tokens on the smart contract.
 /// # Arguments
