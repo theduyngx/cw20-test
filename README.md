@@ -18,12 +18,10 @@ your crate. Specifically, the env should include:
 
 ----------------
 ## Instantiate
-Normally, you'd deploy your smart contract, which you can do with `cwtools`. That said, deployment is expensive, so it is better
-to instantiate it without uploading (the latter is often optional). This is where CosmWasm differs from EVM - you don't actually 
-have to deploy a source code for a new smart contract!<br>
-
-What this implies is you won't even need a Rust Cw20 source code to begin with! You're simply borrowing the implementation of an
-already existed contract on the network without having to upload your code, effectively saving space and gas.
+Normally, you'd deploy your smart contract, which you can do with `cwtools`. That said, deployment is expensive, so if your
+contract is reusing a code base from some other contract already existed on the network, it is better to instantiate it without
+uploading (the latter can therefore be optional). This is where CosmWasm differs from EVM - you don't actually have to deploy a
+source code for a smart contract with existing logic!<br>
 
   ```bash
   # Instantiate
@@ -35,8 +33,7 @@ already existed contract on the network without having to upload your code, effe
     "mint": {"minter": "your_addr"}
   }' --code-id 6082 --label "basic"
   ```
-  * This process is so that you use your smart contract to verify a source code (sort of) and effectively getting a new smart
-    contract state on the network.
+  * This process is so that you instantiate a copied wasm file from another existing contract with its specified code id.
   * `--env` option should precede the path to your environment file.
   * `--input` is the json schema for deploying the smart contract, or it can also be in base-16 format. Note that if this were
     for atomic swap instantiation, then the input would be an empty `{}` (see `instantiate` function in `contract.rs`).
@@ -76,15 +73,13 @@ already existed contract on the network without having to upload your code, effe
     }]
   }'
   ```
-
-  * The upload process is to upload your smart contract and obtain the `.wasm` file to run on the network. That said, you won't
-    be required to upload this unless you make internal logic changes to the Cw20 base.
+  * The upload process is to upload your smart contract and obtain the `.wasm` file to run on the network. As disucssed, you
+    won't be required to upload the source code unless you make internal logic changes to the Cw20 base.
   * After uploading, a new smart contract ID (the simplified `code-id` discussed above) will be returned. You will use this id
-    to instantiate your smart contract on the chain. This means that instead of borrowing some other contract's id, you are
+    to **instantiate** your smart contract on the chain. This means that instead of borrowing some other contract's id, you are
     instead using your own true, new provided one from the uploaded source code.
   * Deploy is simply upload and instantiate in one. Just as the process above, it will first upload the `.wasm` file, use the
-    returned `code-id` to pass it to the instantiate.
-  * With this process, a brand new smart contract source code has been pushed to the network and ready to be used.
+    returned `code-id` to pass it to instantiate the contract.
 
 ----------------
 ## Execute & Query
@@ -100,18 +95,40 @@ for basic smart contract example:
     borrowed so that you don't have to upload your source code to the network. When instantiation of your new smart contract
     succeeds, you will receive a successful `MsgInstantiation` on the blockchain, where it will specify a new hashed reference.
     Use that value here.
+  * In our instantiate operation above, we specified a minter, which is our address. This is why this mint operation will work.
 
-Here are some examples for the swap atomic smart contract:
+Here are the detailed steps to utilizing the atomic swap smart contract:
   ```bash
+  # create
   cwtools wasm execute hashed_ref --env .env --input '{
     "create": {
       "id": "some_id", 
-      "hash": "...", 
+      "hash": "hased_preimage", 
       "recipient": "...", 
       "expires": {"at_height": ...}
     }
   }' --amount "120023"
+
+  # receive
+  cwtools wasm execute hashed_ref --env .env --input '{
+    "receive": {
+      "sender": "...", 
+      "amount": "120023", 
+      "msg": "..."
+    }
+  }'
+
+  # release
+  cwtools wasm execute hashed_ref --env ../.env --input '{
+  "release": {
+    "id": "some_id",
+    "preimage": "actual_preimage"
+  }
+}'
   ```
+<br>
+
+**Create:**
   * `hashed_ref` is the hashed reference to the instantiation smart contract you had uploaded. Unlike the basic implementation,
     we had to upload this smart contract to the network, and in turn, we have created a brand new smart contract with, likewise,
     a hashed value referencing the newly created contract.
@@ -124,3 +141,12 @@ Here are some examples for the swap atomic smart contract:
   * `expires` is the expiration. In this example, we use `at_height`, which represents block height expiration.
   * `--amount` takes in an integer string. It is the amount that this initiator is asking to atomically swap
     for with the specified `recipient` above.
+
+**Receive:**
+  * This is the function to be called on the recipient's end to confirm the swap.
+  * `sender` is the initiator that creates the swap offer and sent it to this recipient.
+  * `msg` is the create message in binary (this is still very much unclear).
+
+**Release:**
+  * `id` should be the same swap id that the initiator sets it to. We are essentially releasing this swap, after all.
+  * `preimage` is, as the name suggests, the preimage of the hash given to the swap.
