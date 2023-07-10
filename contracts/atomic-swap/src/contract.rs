@@ -19,6 +19,25 @@ of sent funds before this expiration". Remember that it is P2P, so we have a def
 
 -   Expiration: After the timeout, if no release has been executed, anyone on the network (though usually it is the
     reipient) can refund the locked funds (now no long locked) to the other end.
+
+TODO: It is not the smart contract's responsibility if either end 'forgets' to release the fee on time. If such a
+process were to be automated, it is the wallet's responsibility to trigger such an action.
+1. The contract should only accept a Receive that:
+    -  references a valid Create (recipient is indeed them, and everything else, importantly the hash, matches)
+    -  has expiration no sooner or equal to the Create's expiration (meaning it must always exceed it);
+       if the expiration is 'forever', then the recipient's should also be 'forever'.
+2. The Receive at the moment will first ask for a binary of a Create, which only makes half sense. The idea is that
+   the recipient should be required to enter their swap_id and expiration (again, if the latter were optional, as in
+   automatically incremented, that is the wallet's job). The recipient must therefore enter:
+    {
+        "receive": {
+            "sender": "sender_addr",
+            "amount": "their_own_amount",       // there should be a token type specification (?)
+            "msg": "msg_binary",                // implicit hash and recipient check
+            "swap_id": "respond_id",
+            "expiration": { "at_height": 2222222 }
+        }
+    }
 */
 
 #[cfg(not(feature = "library"))]
@@ -38,8 +57,8 @@ use cw20::{
 use crate::error::ContractError;
 use crate::state::{all_swap_ids, AtomicSwap, SWAPS};
 use crate::msg::{
-    is_valid_name, BalanceHuman, CreateMsg, DetailsResponse, ExecuteMsg, InstantiateMsg,
-    ListResponse, QueryMsg, ReceiveMsg,
+    is_valid_name, validate_recipient, CreateMsg, DetailsResponse, ExecuteMsg, InstantiateMsg,
+    ListResponse, QueryMsg, ReceiveMsg, BalanceHuman,
 };
 
 // Version info, for migration info
@@ -112,7 +131,10 @@ pub fn execute(
 
         // receive - handling receiving end
         // this is where the other end verifies that they want to do the swap
-        ExecuteMsg::Receive(msg) => execute_receive(deps, env, info, msg),
+        ExecuteMsg::Receive {
+            id,
+            msg
+        } => execute_receive(deps, env, info, msg, id),
     }
 }
 
@@ -197,21 +219,31 @@ pub fn execute_receive(
     env     : Env,
     info    : MessageInfo,
     wrapper : Cw20ReceiveMsg,
+    id      : String
 ) -> Result<Response, ContractError> {
     let unwrapped: ReceiveMsg = from_binary(&wrapper.msg)?;
     let token = Cw20CoinVerified {
         address: info.sender,
         amount : wrapper.amount,
     };
-    // we need to update the info... so the original sender is the one authorizing with these tokens
+    // we need to update the info, so the original sender is the one authorizing with these tokens
     let org_info = MessageInfo {
         sender : deps.api.addr_validate(&wrapper.sender)?,
         funds  : info.funds,
     };
     // we unwrap the wrapper message such that we can call create again
     // we call create, which similarly locks the tokens and verfies the swap (after which we'll release)
-    let ReceiveMsg::Create(msg) = unwrapped;
-    execute_create(deps, env, org_info, msg, Balance::Cw20(token))
+    let ReceiveMsg::Create(create_msg) = unwrapped;
+    // verify recipient
+    validate_recipient(&create_msg.recipient, &token.address)?;
+
+    // the new create message will have its recipient as its sender
+    let recv_msg = CreateMsg {
+        id,
+        recipient: wrapper.sender,
+        ..create_msg
+    };
+    execute_create(deps, env, org_info, recv_msg, Balance::Cw20(token))
 }
 
 

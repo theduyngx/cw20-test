@@ -120,11 +120,11 @@ Here are the detailed steps to utilizing the atomic swap smart contract:
 
   # release
   cwtools wasm execute hashed_ref --env ../.env --input '{
-  "release": {
-    "id": "some_id",
-    "preimage": "actual_preimage"
-  }
-}'
+    "release": {
+      "id": "some_id",
+      "preimage": "actual_preimage"
+    }
+  }'
   ```
 <br>
 

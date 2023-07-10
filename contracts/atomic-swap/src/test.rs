@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::contract::*;
-    use crate::msg::QueryMsg;
+    use crate::msg::{QueryMsg, ReceiveMsg};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{
         coins, from_binary, to_binary, StdError, Uint128,
@@ -45,6 +45,18 @@ mod tests {
         let mut env = mock_env();
         env.block.height = height;
         env
+    }
+
+    #[test]
+    pub fn print_binary() {
+        let create_msg = CreateMsg {
+            id: "random".to_string(),
+            hash: "4d9dbecbaaf42653d09a95c7e1986a047ce98afab5f9f8a4f98b20aa9913c984".to_string(),
+            recipient: "orai1tcenqk4f26vdz97ewdfcefr3akntzghxj7gcaw".to_string(),
+            expires: Expiration::AtHeight(22222222),
+        };
+        let msg = ReceiveMsg::Create(create_msg);
+        println!("\n{}\n", to_binary(&msg).unwrap())
     }
 
 
@@ -458,11 +470,14 @@ mod tests {
             };
             let token_contract = cw20_coin.address;
             let info = mock_info(&token_contract, &[]);
-            let res = execute(
+            let res: cosmwasm_std::Response = execute(
                 deps.as_mut(),
                 mock_env(),
                 info,
-                ExecuteMsg::Receive(receive),
+                ExecuteMsg::Receive {
+                    id: "".to_string(),
+                    msg: receive,
+                }
             )
             .unwrap();
             assert_eq!(0, res.messages.len());
