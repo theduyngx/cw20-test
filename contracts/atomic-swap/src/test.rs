@@ -450,7 +450,7 @@ mod tests {
             assert_eq!(("action", "create"), res.attributes[0]);
 
             // Cw20 side (counter offer (1:1000))
-            let cw20_sender = String::from("b_on_y");
+            let cw20_sender = String::from("a_on_y");
             let cw20_rcpt = String::from("b_on_y");
             let cw20_coin = Cw20Coin {
                 address: String::from("my_cw20_token"),
