@@ -45,8 +45,4 @@ pub enum ContractError {
     /// a single swap for a smart contract at a time
     #[error("Atomic swap already exists")]
     AlreadyExists,
-
-    /// Recipient does not match with the specified in Create
-    #[error("Recipient is not authorized")]
-    RecipientUnauthorized,
 }

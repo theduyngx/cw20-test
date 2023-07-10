@@ -1,4 +1,4 @@
-# Cw-20 Token Implementation
+# Cw-20 Smart Contract Implementation
 
 `cwtools` is an alternative to Rust-optimizer. It is developed by Oraichain, source code here:
 https://github.com/oraichain/cosmwasm-tools (I did NOT develop this tool, the source code belongs to Oraichain - though in this
@@ -97,7 +97,7 @@ for basic smart contract example:
     Use that value here.
   * In our instantiate operation above, we specified a minter, which is our address. This is why this mint operation will work.
 
-Here are the detailed steps to utilizing the atomic swap smart contract:
+Here are the detailed steps to utilizing the atomic swap smart contract's create (for more details, read README of atomic-swap):
   ```bash
   # create
   cwtools wasm execute hashed_ref --env .env --input '{
@@ -108,23 +108,6 @@ Here are the detailed steps to utilizing the atomic swap smart contract:
       "expires": {"at_height": ...}
     }
   }' --amount "120023"
-
-  # receive
-  cwtools wasm execute hashed_ref --env .env --input '{
-    "receive": {
-      "sender": "...", 
-      "amount": "120023", 
-      "msg": "..."
-    }
-  }'
-
-  # release
-  cwtools wasm execute hashed_ref --env ../.env --input '{
-    "release": {
-      "id": "some_id",
-      "preimage": "actual_preimage"
-    }
-  }'
   ```
 <br>
 
@@ -141,12 +124,3 @@ Here are the detailed steps to utilizing the atomic swap smart contract:
   * `expires` is the expiration. In this example, we use `at_height`, which represents block height expiration.
   * `--amount` takes in an integer string. It is the amount that this initiator is asking to atomically swap
     for with the specified `recipient` above.
-
-**Receive:**
-  * This is the function to be called on the recipient's end to confirm the swap.
-  * `sender` is the initiator that creates the swap offer and sent it to this recipient.
-  * `msg` is the create message in binary (this is still very much unclear).
-
-**Release:**
-  * `id` should be the same swap id that the initiator sets it to. We are essentially releasing this swap, after all.
-  * `preimage` is, as the name suggests, the preimage of the hash given to the swap.

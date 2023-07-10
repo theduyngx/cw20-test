@@ -474,10 +474,7 @@ mod tests {
                 deps.as_mut(),
                 mock_env(),
                 info,
-                ExecuteMsg::Receive {
-                    id: "".to_string(),
-                    msg: receive,
-                }
+                ExecuteMsg::Receive(receive)
             )
             .unwrap();
             assert_eq!(0, res.messages.len());

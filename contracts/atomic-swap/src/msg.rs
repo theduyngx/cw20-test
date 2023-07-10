@@ -3,9 +3,8 @@ The request messages sent to the blockchain server to an atomic swap smart contr
 */
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Coin};
+use cosmwasm_std::Coin;
 use cw20::{Cw20Coin, Cw20ReceiveMsg, Expiration};
-use crate::error::ContractError;
 
 
 /// Instantiate message for the atomic swap does not inherently require anything other than
@@ -33,12 +32,8 @@ pub enum ExecuteMsg {
         id: String,
     },
     /// Receive is required in any Cw20 implementation in order to manage the Send/Receive flow.
-    /// In this case, it will be called to verify that the other end has received the initiator's
-    /// message, and in atomic-swap will mirror create to also lock the tokens of recipient
-    Receive {
-        id: String,
-        msg: Cw20ReceiveMsg,
-    },
+    /// In the context of atomic swap, it is identical to Create, only that it is used for Cw20.
+    Receive(Cw20ReceiveMsg),
 }
 
 /// Receive message is basically just the create message, for whatever reason
@@ -66,29 +61,6 @@ pub struct CreateMsg {
 pub fn is_valid_name(name: &str) -> bool {
     let bytes = name.as_bytes();
     ! (bytes.len() < 3 || bytes.len() > 20)
-}
-
-
-/// Validating that the recipient is indeed the specified one by the sender.
-/// # Arguments
-/// * `init` - the specified recipient by sender
-/// * `curr` - the current recipient that calls Receive
-/// # Returns
-/// * nothing on Ok
-/// * error on Err
-pub fn validate_recipient(init: &str, curr: &Addr) -> Result<(), ContractError> {
-    let curr: &str = curr.as_str();
-    if init == curr {
-        Ok(())
-    }
-    else {
-        Err(ContractError::RecipientUnauthorized)
-    }
-}
-
-
-pub fn validate_sender() {
-    
 }
 
 /// Query message

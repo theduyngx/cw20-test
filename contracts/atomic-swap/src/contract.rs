@@ -6,10 +6,8 @@ of sent funds before this expiration". Remember that it is P2P, so we have a def
 
 -   Create: the initiator will create a swap by providing with a preimage that will get hashed, and send some tokens 
     (which will be locked on the contract until any other end passes this hash in to release and confirm swap), and
-    set an expiration.
-
--   Receive: Before the timeout, anyone qualified can, likewise, simply copy the initiator's hash and similarly
-    create a swap offer to the initiator with the same hash.
+    set an expiration. Before the timeout, anyone qualified can, likewise, simply copy the initiator's hash and
+    similarly create a swap offer to the initiator with the same hash.
 
 -   Release:
     *  At this point, tokens from both parties are locked on the smart contract. By pubicizing the preimage, the 
@@ -19,25 +17,6 @@ of sent funds before this expiration". Remember that it is P2P, so we have a def
 
 -   Expiration: After the timeout, if no release has been executed, anyone on the network (though usually it is the
     reipient) can refund the locked funds (now no long locked) to the other end.
-
-TODO: It is not the smart contract's responsibility if either end 'forgets' to release the fee on time. If such a
-process were to be automated, it is the wallet's responsibility to trigger such an action.
-1. The contract should only accept a Receive that:
-    -  references a valid Create (recipient is indeed them, and everything else, importantly the hash, matches)
-    -  has expiration no sooner or equal to the Create's expiration (meaning it must always exceed it);
-       if the expiration is 'forever', then the recipient's should also be 'forever'.
-2. The Receive at the moment will first ask for a binary of a Create, which only makes half sense. The idea is that
-   the recipient should be required to enter their swap_id and expiration (again, if the latter were optional, as in
-   automatically incremented, that is the wallet's job). The recipient must therefore enter:
-    {
-        "receive": {
-            "sender": "sender_addr",
-            "amount": "their_own_amount",       // there should be a token type specification (?)
-            "msg": "msg_binary",                // implicit hash and recipient check
-            "swap_id": "respond_id",
-            "expiration": { "at_height": 2222222 }
-        }
-    }
 */
 
 #[cfg(not(feature = "library"))]
@@ -57,8 +36,8 @@ use cw20::{
 use crate::error::ContractError;
 use crate::state::{all_swap_ids, AtomicSwap, SWAPS};
 use crate::msg::{
-    is_valid_name, validate_recipient, CreateMsg, DetailsResponse, ExecuteMsg, InstantiateMsg,
-    ListResponse, QueryMsg, ReceiveMsg, BalanceHuman,
+    is_valid_name, BalanceHuman, CreateMsg, DetailsResponse, ExecuteMsg, InstantiateMsg,
+    ListResponse, QueryMsg, ReceiveMsg,
 };
 
 // Version info, for migration info
@@ -108,7 +87,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
 
-        // create - swap creation
+        // create - swap creation for native tokens
         // first, we send the funds to the contract, which will be stored in info storage
         ExecuteMsg::Create(msg) => {
             let sent_funds = info.funds.clone();
@@ -129,12 +108,8 @@ pub fn execute(
             id
         } => execute_refund(deps, env, id),
 
-        // receive - handling receiving end
-        // this is where the other end verifies that they want to do the swap
-        ExecuteMsg::Receive {
-            id,
-            msg
-        } => execute_receive(deps, env, info, msg, id),
+        // receive - same with create but for Cw20 tokens
+        ExecuteMsg::Receive(msg) => execute_receive(deps, env, info, msg),
     }
 }
 
@@ -203,14 +178,13 @@ pub fn execute_create(
 }
 
 
-/// Receive - contract receives the agreed upon swap tokens from another. Hence, `this` 
-/// is the receiver, and `other` is the sender. It is the mirror of create to also use
-/// the same hash to lock their tokens.
+/// Receive - this is identical to Create, but the difference is, this is used for Cw20 tokens,
+/// instead of native tokens.
 /// # Arguments
 /// * `deps`    - mutable dependency which has the storage (state) of the chain
 /// * `env`     - environment variables which include block information
 /// * `info`    - initiator's information (including their address and balance)
-/// * `wrapper` - the Cw20 receive message (including a sender, amount, and msg)
+/// * `wrapper` - the Cw20 receive message (including a sender, amount, and the create msg)
 ///               it is wrapped in binary (as it appears so)
 /// # Returns
 /// * the execute response
@@ -219,35 +193,25 @@ pub fn execute_receive(
     env     : Env,
     info    : MessageInfo,
     wrapper : Cw20ReceiveMsg,
-    id      : String
 ) -> Result<Response, ContractError> {
     let unwrapped: ReceiveMsg = from_binary(&wrapper.msg)?;
     let token = Cw20CoinVerified {
         address: info.sender,
         amount : wrapper.amount,
     };
-    // we need to update the info, so the original sender is the one authorizing with these tokens
+    // we need to update the info... so the original sender is the one authorizing with these tokens
     let org_info = MessageInfo {
         sender : deps.api.addr_validate(&wrapper.sender)?,
         funds  : info.funds,
     };
     // we unwrap the wrapper message such that we can call create again
-    // we call create, which similarly locks the tokens and verfies the swap (after which we'll release)
-    let ReceiveMsg::Create(create_msg) = unwrapped;
-    // verify recipient
-    validate_recipient(&create_msg.recipient, &token.address)?;
-
-    // the new create message will have its recipient as its sender
-    let recv_msg = CreateMsg {
-        id,
-        recipient: wrapper.sender,
-        ..create_msg
-    };
-    execute_create(deps, env, org_info, recv_msg, Balance::Cw20(token))
+    // once we've converted the Cw20 Receive Message to the Create Message, we can call create
+    let ReceiveMsg::Create(msg) = unwrapped;
+    execute_create(deps, env, org_info, msg, Balance::Cw20(token))
 }
 
 
-/// Release - both ends have successfully locked their tokens with create-receive
+/// Release - both ends have successfully locked their tokens.
 /// Since this is release phase, it can only be called when the preimage has indeed been publicized,
 /// which only occurs when both parties have locked their tokens on the smart contract.
 /// # Arguments
