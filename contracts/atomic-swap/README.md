@@ -1,22 +1,22 @@
 # Atomic Swaps
 
-**NOTE**: This is implemented by CosmWasm, source: https://github.com/CosmWasm/cw-tokens. Comments and most documents are,
-however, added by the repository's author. That said, the codes will soon be modified to increase some flexibility and
-adaptability.
+**NOTE**: This is [implemented by CosmWasm](https://github.com/CosmWasm/cw-tokens). Comments and most documents are, however,
+added by the repository's author. That said, the codes have been slightly and will continue to be modified to increase some
+flexibility and adaptability.
 
 
 ----------------
-## Mechanism:
+## Mechanism
 
-Atomic swap is P2P, with a definitive sender and recipient. This implementation allows users to execute atomic swaps for
-both **native** and **Cw20 tokens**. It is one-sided, but the other side can be realized by an equivalent (or identical) 
-contract on any other blockchain (typically a different one).
+Atomic swap is P2P, with a definitive sender and recipient. This implementation allows users to execute atomic swaps for both
+**native** and **Cw20 tokens**. It is one-sided, but the other side can be realized by an equivalent (or identical) contract
+on any other blockchain (typically a different one). The implementation also does not allow same sender and recipient.
 
 Each side of an atomic swap has a sender, a recipient, a hash, and a timeout. It also has a unique id (for future calls to
 reference it). The hash is a sha256-encoded 32-bytes long phrase. The timeout can be either time-based (seconds since
 midnight, January 1, 1970), or block height based.
 
-### Initiate & Lock:
+### Initiate & Lock
 * The initiator will initiate a swap by providing a hash of their secret preimage, and send some tokens (which will be locked
 on the contract until any other end passes this hash in to release and confirm swap), and set an expiration.
 * Before this timeout, the recipient can, likewise, simply copy the initiator's hash and similarly create a swap offer to the
@@ -24,14 +24,14 @@ initiator with the same hash.
 * `Receive` in this implementation works identically to `Create`, though it is used specifically for Cw20 tokens, while
 `Create` is used for simple, native tokens.
 
-### Release:
+### Release
 * At which point where both sides have locked their tokens (`Create` swap offers), comes the `Release` phase. By pubicizing 
 the preimage, the initiator has enabled both parties to finally be able to release each other's tokens with said preimage.
 * We can think of the preimage as a password to unlock the frozen tokens. As such, the term 'release' refers to releasing the 
 lock on smart contract for initiator's sent fund. This is the rationale behind the name Hash TimeOut Lock Contract (HTLC) for 
 atomic swaps.
 
-### Refund:
+### Refund
 * As discussed, once the balance has been sent to the atomic swap contract, it is locked up there. This provides a safety
 protocol of not allowing non-atomicity in the transaction, where the release phase is of initiator's full authorization.
 * Because of this, `Refund` is simply not possible, as long as the swap has not expired. Meaning their tokens will be locked
@@ -97,7 +97,7 @@ the repository root: https://github.com/CosmWasm/cw-plus#compiling.
   }'
   ```
 
-### Create:
+### Create
   * `hashed_ref` is the hashed reference to the instantiation smart contract you had uploaded. Unlike the basic implementation,
     we had to upload this smart contract to the network, and in turn, we have created a brand new smart contract with, likewise,
     a hashed value referencing the newly created contract.
@@ -111,7 +111,7 @@ the repository root: https://github.com/CosmWasm/cw-plus#compiling.
   * `--amount` takes in an integer string. It is the amount that this initiator is asking to atomically swap
     for with the specified `recipient` above.
 
-### Receive:
+### Receive
   * This is identical to Create, although it is used for Cw20 tokens.
   * `sender` is the initiator. We can see that `amount` in this case is no longer an optional, but an argument in the JSON format
     of the `Cw20ReceiveMsg`.
@@ -119,6 +119,6 @@ the repository root: https://github.com/CosmWasm/cw-plus#compiling.
     confusion by the fact that JS actually converts this to binary. To get this `msg`, simply go to an online base64 encoder and
     encode the JSON format of the `--input` in `create`. Or use codes (see more in `crate::test::print_binary`).
 
-### Release:
+### Release
   * `id` should be the same swap id that the initiator sets it to. We are releasing this swap with the specified id, after all.
   * `preimage` is, as the name suggests, the preimage of the hash given to the swap.

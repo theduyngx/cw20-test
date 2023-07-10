@@ -1,3 +1,7 @@
+/*
+Unit tests for contract and state.
+*/
+
 #[cfg(test)]
 mod tests {
     use crate::contract::*;
@@ -420,6 +424,7 @@ mod tests {
             );
         }
 
+        /// test that native and Cw20 swap are successful
         #[test]
         fn test_native_cw20_swap() {
             let mut deps = mock_dependencies();
@@ -539,6 +544,40 @@ mod tests {
                     amount: native_coins,
                 })
             );
+        }
+
+        /// test that native swap on same sender and recipient results in failure
+        #[test]
+        fn test_native_same_sender_recipient() {
+            let mut deps = mock_dependencies();
+
+            // Create the contract
+            let info = mock_info("anyone", &[]);
+            let res = instantiate(deps.as_mut(), mock_env(), info, InstantiateMsg {}).unwrap();
+            assert_eq!(0, res.messages.len());
+
+            // Native side (offer) with same sender and recipient
+            let native_sender = String::from("a_on_x");
+            let native_rcpt = String::from("a_on_x");
+            let native_coins = coins(1000, "tokens_native");
+
+            // Create the Native swap offer
+            let native_swap_id = "native_swap".to_string();
+            let create = CreateMsg {
+                id: native_swap_id.clone(),
+                hash: real_hash(),
+                recipient: native_rcpt.clone(),
+                expires: Expiration::AtHeight(123456),
+            };
+            let info = mock_info(&native_sender, &native_coins);
+            let res = execute(
+                deps.as_mut(), mock_env(), info, ExecuteMsg::Create(create)
+            );
+            // check for certain that the returned result is the correct contract error
+            match res {
+                Result::Err(ContractError::SameSenderRecipient) => (),
+                _ => panic!()
+            }
         }
     }
 
