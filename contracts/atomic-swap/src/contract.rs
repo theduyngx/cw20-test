@@ -137,7 +137,11 @@ pub fn execute_create(
     }
 
     // validate recipient address
+    // the smart contract does not allow same sender and recipient
     let recipient = deps.api.addr_validate(&msg.recipient)?;
+    if recipient == info.sender {
+        return Err(ContractError::SameSenderRecipient);
+    }
 
     // create an atomic swap unit
     let swap = AtomicSwap {
@@ -305,8 +309,6 @@ fn send_tokens(to: &Addr, amount: Balance) -> StdResult<Vec<SubMsg>> {
         match amount {
 
             // native coin will simply use the standard Bank Send message (it is compatible to it)
-            // honestly writing a smart contract from scratch seems absolutely confusing due to all
-            // of these seemingly unrelated things that are supposed to be related, somehow
             Balance::Native(coins) => {
                 let msg = BankMsg::Send {
                     to_address: to.into(),
@@ -315,7 +317,8 @@ fn send_tokens(to: &Addr, amount: Balance) -> StdResult<Vec<SubMsg>> {
                 Ok(vec![SubMsg::new(msg)])
             }
 
-            // Cw20 coin (what even happened here?)
+            // Cw20 coin will be sent in a different, more sophisticated way
+            // This has to do with how different smart contracts (even if internally logically) communicate
             Balance::Cw20(coin) => {
                 let msg = Cw20ExecuteMsg::Transfer {
                     recipient: to.into(),

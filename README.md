@@ -97,30 +97,4 @@ for basic smart contract example:
     Use that value here.
   * In our instantiate operation above, we specified a minter, which is our address. This is why this mint operation will work.
 
-Here are the detailed steps to utilizing the atomic swap smart contract's create (for more details, read README of atomic-swap):
-  ```bash
-  # create
-  cwtools wasm execute hashed_ref --env .env --input '{
-    "create": {
-      "id": "some_id", 
-      "hash": "hased_preimage", 
-      "recipient": "...", 
-      "expires": {"at_height": ...}
-    }
-  }' --amount "120023"
-  ```
-<br>
-
-**Create:**
-  * `hashed_ref` is the hashed reference to the instantiation smart contract you had uploaded. Unlike the basic implementation,
-    we had to upload this smart contract to the network, and in turn, we have created a brand new smart contract with, likewise,
-    a hashed value referencing the newly created contract.
-  * `id` is the swap ID which can really be anything named by the initiator. The swap storage on the contract is indexed by these
-    simple, human-readable identifiers. Even if the id had already existed, we would just get an error.
-  * `hash` is the hashed value of the preimage created by the initiator. The initiator, before creating a swap offer, will store
-    their own secret private key, which will be hashed and passed here.
-  * `recipient` is the recipient's wallet address. If the offer is approved, the recipient receives the token, and their agreed 
-    upon balance on the network will also be released to the initiator. Remember that atomic swap is P2P.
-  * `expires` is the expiration. In this example, we use `at_height`, which represents block height expiration.
-  * `--amount` takes in an integer string. It is the amount that this initiator is asking to atomically swap
-    for with the specified `recipient` above.
+For details of atomic swap, read README of atomic-swap directory in contracts.

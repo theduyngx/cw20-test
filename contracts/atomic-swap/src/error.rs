@@ -45,4 +45,8 @@ pub enum ContractError {
     /// a single swap for a smart contract at a time
     #[error("Atomic swap already exists")]
     AlreadyExists,
+
+    /// Smart contract does not allow the same sender and recipient
+    #[error("Sender and recipient cannot be the same")]
+    SameSenderRecipient,
 }

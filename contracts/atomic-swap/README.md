@@ -5,6 +5,7 @@ however, added by the repository's author. That said, the codes will soon be mod
 adaptability.
 
 
+----------------
 ## Mechanism:
 
 Atomic swap is P2P, with a definitive sender and recipient. This implementation allows users to execute atomic swaps for
@@ -40,6 +41,7 @@ See the [IOV atomic swap spec](https://github.com/iov-one/iov-core/blob/master/d
 for details.
 
 
+----------------
 ## Running this contract
 
 You will need Rust 1.44.1+ with `wasm32-unknown-unknown` target installed.
@@ -61,6 +63,7 @@ Or for a production-ready (optimized) build, run a build command in the
 the repository root: https://github.com/CosmWasm/cw-plus#compiling.
 
 
+----------------
 ## Detailed usage
 
   ```bash
