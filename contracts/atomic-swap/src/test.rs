@@ -47,10 +47,12 @@ mod tests {
         env
     }
 
+    /// Test printing binary format (or more accurately the base64) of a Create Message to be used for the
+    /// Receive Cw20 Message.
     #[test]
     pub fn print_binary() {
         let create_msg = CreateMsg {
-            id: "random".to_string(),
+            id: "some_id".to_string(),
             hash: "4d9dbecbaaf42653d09a95c7e1986a047ce98afab5f9f8a4f98b20aa9913c984".to_string(),
             recipient: "orai1tcenqk4f26vdz97ewdfcefr3akntzghxj7gcaw".to_string(),
             expires: Expiration::AtHeight(22222222),

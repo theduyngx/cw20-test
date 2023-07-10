@@ -3,20 +3,6 @@ Smart contract for token atomic swap on the CosmWasm network.
 Mechanism: the atomic swap starts with initiator first sending a certain amount of tokens onto the atomic swap 
 smart contract, and other end will receive: "Send this id this amount of your coin in exchange for said id's amount 
 of sent funds before this expiration". Remember that it is P2P, so we have a definitive sender and receipient.
-
--   Create: the initiator will create a swap by providing with a preimage that will get hashed, and send some tokens 
-    (which will be locked on the contract until any other end passes this hash in to release and confirm swap), and
-    set an expiration. Before the timeout, anyone qualified can, likewise, simply copy the initiator's hash and
-    similarly create a swap offer to the initiator with the same hash.
-
--   Release:
-    *  At this point, tokens from both parties are locked on the smart contract. By pubicizing the preimage, the 
-       initiator has enabled both parties to finally be able to release each other's tokens with said preimage.
-    *  The term 'release' refers to releasing the lock on smart contract for initiator's sent fund. This 
-       is the rationale behind the name Hash TimeOut Lock Contract (HTLC) for atomic swaps.
-
--   Expiration: After the timeout, if no release has been executed, anyone on the network (though usually it is the
-    reipient) can refund the locked funds (now no long locked) to the other end.
 */
 
 #[cfg(not(feature = "library"))]
