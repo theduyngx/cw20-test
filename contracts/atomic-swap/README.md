@@ -11,10 +11,11 @@ flexibility and adaptability.
 Atomic swap is P2P, with a definitive sender and recipient. This implementation allows users to execute atomic swaps for both
 **native** and **Cw20 tokens**. It is one-sided, but the other side can be realized by an equivalent (or identical) contract
 on any other blockchain (typically a different one). The implementation also does not allow same sender and recipient.
+Migration is now in development.
 
 Each side of an atomic swap has a sender, a recipient, a hash, and a timeout. It also has a unique id (for future calls to
 reference it). The hash is a sha256-encoded 32-bytes long phrase. The timeout can be either time-based (seconds since
-midnight, January 1, 1970), or block height based.
+midnight, January 1, 1970), or block height based. The hash encodes a preimage, which is a UTF-8 string.
 
 Note that it is not the smart contract's responsibility to ensure that the specific tokens in a swap agreement (BTC, ETH, etc.)
 are of their correct type, or that the amount offered does not equal to the amount agreed upon by either end. It is also not

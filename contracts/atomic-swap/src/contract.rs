@@ -10,6 +10,7 @@ use cosmwasm_std::{
     Addr, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Response,
     StdResult, SubMsg, WasmMsg, from_binary, to_binary, entry_point
 };
+use cosmwasm_std::Order::Ascending;
 use sha2::{Digest, Sha256};
 
 use cw_storage_plus::Bound;
@@ -20,9 +21,10 @@ use cw20::{
 
 use crate::error::ContractError;
 use crate::state::{all_swap_ids, AtomicSwap, SWAPS};
+use crate::migrate::ensure_from_older_version;
 use crate::msg::{
     is_valid_name, BalanceHuman, CreateMsg, DetailsResponse, ExecuteMsg, InstantiateMsg,
-    ListResponse, QueryMsg, ReceiveMsg,
+    ListResponse, QueryMsg, ReceiveMsg, MigrateMsg
 };
 
 // Version info, for migration info
@@ -417,4 +419,33 @@ fn query_list(
     Ok(ListResponse {
         swaps: all_swap_ids(deps.storage, start, limit)?,
     })
+}
+
+
+/// Migrate atomic swap smart contract using Cw20-base logic.
+/// # Arguments
+/// * `deps` - mutable dependency which has the storage (state) of the chain
+/// * `_env` - environment variables which include block information
+/// * `_msg` - the Cw20-base Migrate message
+/// # Returns
+/// * migrate response on Ok
+/// * the error on Err
+pub fn migrate(
+    deps: DepsMut,
+    _env: Env,
+    _msg: MigrateMsg
+) -> Result<Response, ContractError> {
+    let original_version =
+        ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    if original_version < "0.14.0".parse::<semver::Version>().unwrap() {
+        // Build reverse map of swaps per spender
+        let data = SWAPS
+            .range(deps.storage, None, None, Ascending)
+            .collect::<StdResult<Vec<_>>>()?;
+        for (sender, swap) in data {
+            SWAPS.save(deps.storage, &sender, &swap)?;
+        }
+    }
+    Ok(Response::default())
 }

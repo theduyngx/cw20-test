@@ -1,7 +1,8 @@
 pub mod contract;
-mod error;
-mod test;
-pub mod msg;
 pub mod state;
+pub mod msg;
+mod test;
+mod error;
+mod migrate;
 
-pub use crate::error::ContractError;
+pub use error::ContractError;

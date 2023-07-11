@@ -3,6 +3,8 @@ The request messages sent to the blockchain server to an atomic swap smart contr
 */
 
 use cosmwasm_std::Coin;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cw20::{Cw20Coin, Cw20ReceiveMsg, Expiration};
 
@@ -109,3 +111,7 @@ pub enum BalanceHuman {
     Native(Vec<Coin>),
     Cw20(Cw20Coin),
 }
+
+/// Migrate message - as with Cw20 standard, it is for now empty, though open to extensibility
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct MigrateMsg {}

@@ -18,15 +18,18 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-cw-utils = "0.16.0"
-cw2 = "0.16.0"
-cw20 = "0.16.0"
+cw-utils = "1.0.1"
+cw2 = "1.1.0"
+cw20 = "1.1.0"
 cosmwasm-schema = "1.1.5"
 cosmwasm-std = "1.1.5"
-cw-storage-plus = "0.16.0"
+cw-storage-plus = "1.1.0"
 thiserror = "1.0.31"
 hex = "0.3.2"
 sha2 = "0.8.2"
+schemars = "0.8.8"
+serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+cw20-base = { version = "1.1.0", features = ["library"] }
+semver = "1"
 
 [dev-dependencies]
-
