@@ -1,28 +1,27 @@
 /*
-Unit tests for contract and state.
+Testing for contract and state.
 */
 
 #[cfg(test)]
 mod tests {
     use crate::contract::*;
-    use crate::msg::{QueryMsg, ReceiveMsg};
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use crate::error::ContractError;
+    use crate::msg::{
+        InstantiateMsg, CreateMsg, ExecuteMsg, QueryMsg, ReceiveMsg,
+        ListResponse, DetailsResponse, BalanceHuman
+    };
+
+    use sha2::{Digest, Sha256};
     use cosmwasm_std::{
         coins, from_binary, to_binary, StdError, Uint128,
         Timestamp, BankMsg, Env, SubMsg, WasmMsg
     };
-
-    use sha2::{Digest, Sha256};
+    use cosmwasm_std::testing::{
+        mock_dependencies, mock_env, mock_info
+    };
     use cw20::{
         Cw20Coin, Cw20ExecuteMsg, Cw20ReceiveMsg, Expiration
     };
-
-    use crate::error::ContractError;
-    use crate::msg::{
-        BalanceHuman, CreateMsg, DetailsResponse, ExecuteMsg, InstantiateMsg,
-        ListResponse
-    };
-
 
     /// Preimage - the default testing hash input
     fn preimage() -> String {
@@ -54,6 +53,7 @@ mod tests {
     /// Test printing binary format (or more accurately the base64) of a Create Message to be used for the
     /// Receive Cw20 Message.
     #[test]
+    #[ignore = "get_binary"]
     pub fn print_binary() {
         let create_msg = CreateMsg {
             id: "some_id".to_string(),
@@ -589,13 +589,6 @@ mod tests {
         use cosmwasm_std::testing::MockStorage;
         use cosmwasm_std::{Binary, Addr};
 
-        #[test]
-        fn test_no_swap_ids() {
-            let storage = MockStorage::new();
-            let ids = all_swap_ids(&storage, None, 10).unwrap();
-            assert_eq!(0, ids.len());
-        }
-
         fn dummy_swap() -> AtomicSwap {
             AtomicSwap {
                 recipient: Addr::unchecked("recip"),
@@ -604,6 +597,13 @@ mod tests {
                 hash: Binary("hash".into()),
                 balance: Default::default(),
             }
+        }
+
+        #[test]
+        fn test_no_swap_ids() {
+            let storage = MockStorage::new();
+            let ids = all_swap_ids(&storage, None, 10).unwrap();
+            assert_eq!(0, ids.len());
         }
 
         #[test]

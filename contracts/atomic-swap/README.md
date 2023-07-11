@@ -16,20 +16,29 @@ Each side of an atomic swap has a sender, a recipient, a hash, and a timeout. It
 reference it). The hash is a sha256-encoded 32-bytes long phrase. The timeout can be either time-based (seconds since
 midnight, January 1, 1970), or block height based.
 
+Note that it is not the smart contract's responsibility to ensure that the specific tokens in a swap agreement (BTC, ETH, etc.)
+are of their correct type, or that the amount offered does not equal to the amount agreed upon by either end. It is also not
+the contract's responsibility to release the tokens to the recipient, even if said recipient *forgets* passed due date (meaning
+no automatic protocol to release the tokens).
+
 ### Initiate & Lock
 * The initiator will initiate a swap by providing a hash of their secret preimage, and send some tokens (which will be locked
-on the contract until any other end passes this hash in to release and confirm swap), and set an expiration.
+on the contract until the recipient passes this hash in to confirm swap and release), and set an expiration.
 * Before this timeout, the recipient can, likewise, simply copy the initiator's hash and similarly create a swap offer to the
-initiator with the same hash.
+initiator with the same hash. This will lock the recipient's tokens as well, where the only action left available is to either
+wait till expiration for a refund (see more in **Refund** segment), or release their tokens to the other end.
 * `Receive` in this implementation works identically to `Create`, though it is used specifically for Cw20 tokens, while
 `Create` is used for simple, native tokens.
 
 ### Release
-* At which point where both sides have locked their tokens (`Create` swap offers), comes the `Release` phase. By pubicizing 
+* At which point where both sides have locked their tokens (`Create` swap offers), comes the `Release` phase. By publicizing 
 the preimage, the initiator has enabled both parties to finally be able to release each other's tokens with said preimage.
 * We can think of the preimage as a password to unlock the frozen tokens. As such, the term 'release' refers to releasing the 
 lock on smart contract for initiator's sent fund. This is the rationale behind the name Hash TimeOut Lock Contract (HTLC) for 
 atomic swaps.
+* To reiterate, the only way to release the locked tokens is to either wait till expiration, or that the initiator agrees to
+publicize their preimage, which would only occur when the initiator agrees that the recipient's swap offer is valid. By
+doing so, `Release` may be executed, and the locked tokens will thus be transferred to their respective recipient.
 
 ### Refund
 * As discussed, once the balance has been sent to the atomic swap contract, it is locked up there. This provides a safety
@@ -37,8 +46,7 @@ protocol of not allowing non-atomicity in the transaction, where the release pha
 * Because of this, `Refund` is simply not possible, as long as the swap has not expired. Meaning their tokens will be locked
 unless released (to the other end's contract) or timed out.
 
-See the [IOV atomic swap spec](https://github.com/iov-one/iov-core/blob/master/docs/atomic-swap-protocol-v1.md)
-for details.
+See the [IOV atomic swap spec](https://github.com/iov-one/iov-core/blob/master/docs/atomic-swap-protocol-v1.md) for details.
 
 
 ----------------
@@ -59,8 +67,8 @@ ls -l cw20_atomic_swap.wasm
 sha256sum cw20_atomic_swap.wasm
 ```
 
-Or for a production-ready (optimized) build, run a build command in the
-the repository root: https://github.com/CosmWasm/cw-plus#compiling.
+Or for a production-ready (optimized) build, run a build command in the the repository root: 
+https://github.com/CosmWasm/cw-plus#compiling.
 
 
 ----------------
@@ -82,9 +90,9 @@ the repository root: https://github.com/CosmWasm/cw-plus#compiling.
     "receive": {
       "sender": "...", 
       "amount": "120023", 
-      "msg": "eyJjcmVhdGUiOnsiaWQiOiJzb21lX2lkIiwiaGFzaCI6IjRkOWRiZWNiYWFmNDI2NTNkMDlhOTVjN2UxOTg2YT
-              A0N2NlOThhZmFiNWY5ZjhhNGY5OGIyMGFhOTkxM2M5ODQiLCJyZWNpcGllbnQiOiJvcmFpMXRjZW5xazRmMjZ2
-              ZHo5N2V3ZGZjZWZyM2FrbnR6Z2h4ajdnY2F3IiwiZXhwaXJlcyI6eyJhdF9oZWlnaHQiOjIyMjIyMjIyfX19"
+      "msg": "eyJjcmVhdGUiOnsiaWQiOiJzb21lX2lkIiwiaGFzaCI6IjRkOWRiZWNiYWFmNDI2NTNkMDlhOTVjN2UxOTg2Y
+             TA0N2NlOThhZmFiNWY5ZjhhNGY5OGIyMGFhOTkxM2M5ODQiLCJyZWNpcGllbnQiOiJvcmFpMXRjZW5xazRmMjZ
+             2ZHo5N2V3ZGZjZWZyM2FrbnR6Z2h4ajdnY2F3IiwiZXhwaXJlcyI6eyJhdF9oZWlnaHQiOjIyMjIyMjIyfX19"
     }
   }'
 
@@ -93,6 +101,13 @@ the repository root: https://github.com/CosmWasm/cw-plus#compiling.
     "release": {
       "id": "some_id",
       "preimage": "this is a preimage of the first create message from the atomic swap"
+    }
+  }'
+
+  # refund
+  cwtools wasm execute [hashed_ref] --env .env --input '{
+    "refund": {
+      "id": "some_id"
     }
   }'
   ```
@@ -115,10 +130,25 @@ the repository root: https://github.com/CosmWasm/cw-plus#compiling.
   * This is identical to Create, although it is used for Cw20 tokens.
   * `sender` is the initiator. We can see that `amount` in this case is no longer an optional, but an argument in the JSON format
     of the `Cw20ReceiveMsg`.
-  * `msg` is the create message in *binary*. That said, as we can see here, the message is in Base64 format. This is due to some
-    confusion by the fact that JS actually converts this to binary. To get this `msg`, simply go to an online base64 encoder and
-    encode the JSON format of the `--input` in `create`. Or use codes (see more in `crate::test::print_binary`).
+  * `msg` is the create message in *binary*. That said, we can see that the message is in Base64 format. This is due to the fact
+    that JS actually, eventually does convert this to binary. To get this `msg`, simply go to an online base64 encoder and encode
+    the JSON format of the `--input` in `create`. Or use codes (see more in `crate::test::print_binary`).
 
 ### Release
   * `id` should be the same swap id that the initiator sets it to. We are releasing this swap with the specified id, after all.
-  * `preimage` is, as the name suggests, the preimage of the hash given to the swap.
+  * `preimage` is, as the name suggests, the preimage of the hash given to the swap. In this example, the given preimage is, in
+    fact, the preimage of the hash above.
+
+### Refund
+  * `id` is the only requirement for refunding. Meaning refund is local to the smart contract itself.
+  * Specifically, refund will delete the swap offer on the smart contract's storage through accessing the key `id` to delete the
+    entry. Refunding when swap has not expired will return an error.
+<br><br>
+
+**NOTE:** Due to some environment incompatibilites in the configuration of cwtools, the `cwtools` directory in this repository
+has made some changes. If your cwtools cannot run, use this repository's cwtools instead (which in turn will not be global). To
+do so, `cd` to `cwtools` directory within this repository, and instead of running the command `cwtools`, run `yarn start:dev`
+instead. Of course, within this directory, your `.env` file will be in the parent's. Here's an example:
+```bash
+yarn start:dev wasm execute [hashed_ref] --env ../.env --input '{ ... }'
+```
