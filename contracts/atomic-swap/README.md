@@ -75,8 +75,10 @@ https://github.com/CosmWasm/cw-plus#compiling.
 ----------------
 ## Detailed usage
 
+We will clarify some cwtools commands to use the services provided by the smart contract.
+
+### Create
   ```bash
-  # create
   cwtools wasm execute [hashed_ref] --env .env --input '{
     "create": {
       "id": "some_id", 
@@ -85,35 +87,7 @@ https://github.com/CosmWasm/cw-plus#compiling.
       "expires": {"at_height": 22222222222}
     }
   }' --amount "120023"
-
-  # receive
-  cwtools wasm execute [hashed_ref] --env .env --input '{
-    "receive": {
-      "sender": "...", 
-      "amount": "120023", 
-      "msg": "eyJjcmVhdGUiOnsiaWQiOiJzb21lX2lkIiwiaGFzaCI6IjRkOWRiZWNiYWFmNDI2NTNkMDlhOTVjN2UxOTg2Y
-             TA0N2NlOThhZmFiNWY5ZjhhNGY5OGIyMGFhOTkxM2M5ODQiLCJyZWNpcGllbnQiOiJvcmFpMXRjZW5xazRmMjZ
-             2ZHo5N2V3ZGZjZWZyM2FrbnR6Z2h4ajdnY2F3IiwiZXhwaXJlcyI6eyJhdF9oZWlnaHQiOjIyMjIyMjIyfX19"
-    }
-  }'
-
-  # release
-  cwtools wasm execute [hashed_ref] --env .env --input '{
-    "release": {
-      "id": "some_id",
-      "preimage": "this is a preimage of the first create message from the atomic swap"
-    }
-  }'
-
-  # refund
-  cwtools wasm execute [hashed_ref] --env .env --input '{
-    "refund": {
-      "id": "some_id"
-    }
-  }'
   ```
-
-### Create
   * `hashed_ref` is the hashed reference to the instantiation smart contract you had uploaded. Unlike the basic implementation,
     we had to upload this smart contract to the network, and in turn, we have created a brand new smart contract with, likewise,
     a hashed value referencing the newly created contract.
@@ -128,6 +102,17 @@ https://github.com/CosmWasm/cw-plus#compiling.
     for with the specified `recipient` above.
 
 ### Receive
+  ```bash
+  cwtools wasm execute [hashed_ref] --env .env --input '{
+    "receive": {
+      "sender": "...", 
+      "amount": "120023", 
+      "msg": "eyJjcmVhdGUiOnsiaWQiOiJzb21lX2lkIiwiaGFzaCI6IjRkOWRiZWNiYWFmNDI2NTNkMDlhOTVjN2UxOTg2Y
+             TA0N2NlOThhZmFiNWY5ZjhhNGY5OGIyMGFhOTkxM2M5ODQiLCJyZWNpcGllbnQiOiJvcmFpMXRjZW5xazRmMjZ
+             2ZHo5N2V3ZGZjZWZyM2FrbnR6Z2h4ajdnY2F3IiwiZXhwaXJlcyI6eyJhdF9oZWlnaHQiOjIyMjIyMjIyfX19"
+    }
+  }'
+  ```
   * This is identical to Create, although it is used for Cw20 tokens.
   * `sender` is the initiator. We can see that `amount` in this case is no longer an optional, but an argument in the JSON format
     of the `Cw20ReceiveMsg`.
@@ -136,14 +121,38 @@ https://github.com/CosmWasm/cw-plus#compiling.
     the JSON format of the `--input` in `create`. Or use codes (see more in `crate::test::print_binary`).
 
 ### Release
+  ```bash
+  cwtools wasm execute [hashed_ref] --env .env --input '{
+    "release": {
+      "id": "some_id",
+      "preimage": "this is a preimage of the first create message from the atomic swap"
+    }
+  }'
+  ```
   * `id` should be the same swap id that the initiator sets it to. We are releasing this swap with the specified id, after all.
   * `preimage` is, as the name suggests, the preimage of the hash given to the swap. In this example, the given preimage is, in
     fact, the preimage of the hash above.
 
 ### Refund
+  ```bash
+  cwtools wasm execute [hashed_ref] --env .env --input '{
+    "refund": {
+      "id": "some_id"
+    }
+  }'
+  ```
   * `id` is the only requirement for refunding. Meaning refund is local to the smart contract itself.
   * Specifically, refund will delete the swap offer on the smart contract's storage through accessing the key `id` to delete the
     entry. Refunding when swap has not expired will return an error.
+
+### Migrate
+  ```bash
+  cwtools wasm migrate [hashed_ref] --env ../.env --input '{}' --code-id 6012
+  ```
+  * Important note: migration requires authorization, meaning the field `--admin` is required when instantiating this contract.
+  * In this migration command, we can see that we're referring to the `[hashed_ref]` of the smart contract (the contract's 
+    address), and its code-id.
+  * For now, an input is not required for migration (as with most Cw20 standards).
 <br><br>
 
 **NOTE:** Due to some environment incompatibilites in the configuration of cwtools, the `cwtools` directory in this repository

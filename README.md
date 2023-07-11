@@ -31,7 +31,7 @@ source code for a smart contract with existing logic!<br>
       "amount: "20000", "address": "your_addr"
     }], 
     "mint": {"minter": "your_addr"}
-  }' --code-id 6082 --label "basic"
+  }' --code-id 6082 --label "basic" --admin "your_addr"
   ```
   * This process is so that you instantiate a copied wasm file from another existing contract with its specified code id.
   * `--env` option should precede the path to your environment file.
@@ -43,6 +43,8 @@ source code for a smart contract with existing logic!<br>
       the same Cw20 base as yours.
     * Sharing the same underlying standard allows this instantiation without having to upload your source code to the network.
   * `--label` is required, though arbitrary.
+  * `--admin` is used specifically for operations that require some form of authorization. It could be an existing contract's,
+    or a wallet's address. In this case, we've used `"your_addr"`, which is referring to the wallet's address.
 
 ----------------
 ## Upload / Deploy
