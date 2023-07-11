@@ -55,7 +55,6 @@ const buildContract = async (
 
     // wasm-optimize on all results
     console.log(`Optimizing ${wasmFile}`);
-    spawnPromise('wasm-opt',['--help']).then(data => console.log("wasm opt: ", data))
     await spawnPromise(
       'wasm-opt', 
       [
