@@ -25,22 +25,22 @@ mod tests {
 
     /// Preimage - the default testing hash input
     fn preimage() -> String {
-        hex::encode(b"This is a string, 32 bytes long.")
+        "This is a string, 32 bytes long.".to_string()
     }
 
     /// The custom preimage
     fn custom_preimage(int: u16) -> String {
-        hex::encode(format!("This is a custom string: {:>7}", int))
+        format!("This is a custom string: {:>7}", int)
     }
 
     /// Default hashed of the preimage
     fn real_hash() -> String {
-        hex::encode(&Sha256::digest(&hex::decode(preimage()).unwrap()))
+        hex::encode(&Sha256::digest(preimage().as_bytes()))
     }
 
     /// Hashed of the custom preimage
     fn custom_hash(int: u16) -> String {
-        hex::encode(&Sha256::digest(&hex::decode(custom_preimage(int)).unwrap()))
+        hex::encode(&Sha256::digest(custom_preimage(int).as_bytes()))
     }
 
     /// Mock block height within the chain
@@ -229,7 +229,7 @@ mod tests {
             let err = execute(deps.as_mut(), mock_env(), info.clone(), release).unwrap_err();
             assert_eq!(
                 err,
-                ContractError::ParseError("Invalid character \'u\' at position 1".to_string())
+                ContractError::InvalidPreimage {}
             );
 
             // Cannot release, wrong hash

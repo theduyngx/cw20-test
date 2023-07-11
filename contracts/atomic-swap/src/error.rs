@@ -21,7 +21,7 @@ pub enum ContractError {
     InvalidId {},
 
     /// Error where the preimage is not valid (probably not UTF-8?)
-    #[error("Invalid preimage")]
+    #[error("Invalid preimage - preimage does not match hash")]
     InvalidPreimage {},
 
     /// Error where the hash is not valid

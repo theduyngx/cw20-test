@@ -2,8 +2,8 @@
 The request messages sent to the blockchain server to an atomic swap smart contract.
 */
 
-use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Coin;
+use cosmwasm_schema::{cw_serde, QueryResponses};
 use cw20::{Cw20Coin, Cw20ReceiveMsg, Expiration};
 
 
@@ -103,6 +103,7 @@ pub struct DetailsResponse {
     pub balance: BalanceHuman,
 }
 
+/// Balance representation - either in Native or Cw20 tokens
 #[cw_serde]
 pub enum BalanceHuman {
     Native(Vec<Coin>),

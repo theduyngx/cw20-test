@@ -21,6 +21,7 @@ pub struct AtomicSwap {
     pub expires   : Expiration,
     /// Balance in native tokens, or cw20 token
     pub balance   : Balance,
+    // pub memo: String
 }
 
 /// Atomic swap can check itself whether it has expired or not with block info

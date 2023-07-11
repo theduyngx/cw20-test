@@ -6,10 +6,9 @@ of sent funds before this expiration". Remember that it is P2P, so we have a def
 */
 
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     Addr, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Response,
-    StdResult, SubMsg, WasmMsg, from_binary, to_binary
+    StdResult, SubMsg, WasmMsg, from_binary, to_binary, entry_point
 };
 use sha2::{Digest, Sha256};
 
@@ -224,7 +223,7 @@ pub fn execute_release(
     }
 
     // check whether the preimage matches the hash or not
-    let hash = Sha256::digest(&parse_hex_32(&preimage)?);
+    let hash = Sha256::digest(preimage.as_bytes());
     if hash.as_slice() != swap.hash.as_slice() {
         return Err(ContractError::InvalidPreimage {});
     }
