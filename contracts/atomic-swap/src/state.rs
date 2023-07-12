@@ -45,3 +45,7 @@ pub fn all_swap_ids<'a>(
         .take(limit)
         .collect()
 }
+
+/// Unit tests
+#[cfg(test)]
+mod state_test;

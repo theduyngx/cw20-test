@@ -1,7 +1,7 @@
 # Atomic Swaps
 
 **NOTE**: This is [implemented by CosmWasm](https://github.com/CosmWasm/cw-tokens). Comments and most documents are, however,
-added by the repository's author. That said, the codes have been slightly and will continue to be modified to increase some
+added by the repository's author. That said, the codes have been and will continue to be modified to increase some
 flexibility and adaptability.
 
 
@@ -40,6 +40,9 @@ atomic swaps.
 * To reiterate, the only way to release the locked tokens is to either wait till expiration, or that the initiator agrees to
 publicize their preimage, which would only occur when the initiator agrees that the recipient's swap offer is valid. By
 doing so, `Release` may be executed, and the locked tokens will thus be transferred to their respective recipient.
+* An important point is that once the initiator releases the lock, their preimage will already have been made public on the
+blockchain, so publicizing the preimage cannot be avoided. That said, perhaps for safety measures, the recipient's wallet
+should automatically set expiration reasonably later than that of the initiator.
 
 ### Refund
 * As discussed, once the balance has been sent to the atomic swap contract, it is locked up there. This provides a safety
@@ -150,9 +153,9 @@ We will clarify some cwtools commands to use the services provided by the smart 
   * Important note: migration requires authorization, meaning the field `--admin` is required when instantiating this contract.
   * Migration is a process that helps change the interal logic of a contract while still keeping the current contract's address.
     Firstly, you'd need to **build** the new smart contract `.wasm` file and **upload** it. As discussed, this will give you a 
-    simplified `code-id` of the new contract.
+    simplified `code-id` (source code id) of the new contract.
   * In this migration command, the `[hashed_ref]` is the address of the current smart contract that you'd like to keep, and
-    `--code-id` is the simplified id of the new uploaded contract.
+    `--code-id` is the simplified source code id of the new uploaded contract.
   * After executing the migration, your new uploaded contract will have the original contract's address (`[hased_ref]`), meaning
     the same contract has had its logic replaced.
   * For now, an input is not required for migration (as with most Cw20 standards).

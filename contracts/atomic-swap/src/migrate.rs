@@ -42,3 +42,7 @@ pub fn ensure_from_older_version(
 fn from_semver(err: semver::Error) -> StdError {
     StdError::generic_err(format!("Semver: {}", err))
 }
+
+/// Unit tests
+#[cfg(test)]
+mod migrate_test;

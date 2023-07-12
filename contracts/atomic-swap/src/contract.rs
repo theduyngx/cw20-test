@@ -455,3 +455,8 @@ pub fn migrate(
     }
     Ok(Response::default())
 }
+
+
+/// Unit tests
+#[cfg(test)]
+mod contract_test;
