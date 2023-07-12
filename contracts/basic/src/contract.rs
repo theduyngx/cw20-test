@@ -1,5 +1,3 @@
-use crate::msg::MigrateMsg;
-
 use cosmwasm_std::{
     Deps, DepsMut, Env, MessageInfo, Response, StdResult, Binary, to_binary, entry_point
 };
@@ -9,13 +7,14 @@ use cw20_base::allowances::{
     execute_increase_allowance, execute_decrease_allowance, query_allowance
 };
 use cw20_base::contract::{
-    execute_transfer, execute_burn, execute_send, execute_mint, execute_update_marketing, execute_upload_logo, 
-    query_balance, query_token_info, query_minter, query_marketing_info, query_download_logo, execute_update_minter
+    execute_transfer, execute_burn, execute_send, execute_mint, execute_update_marketing,
+    execute_upload_logo, execute_update_minter, query_balance, query_token_info, query_minter, 
+    query_marketing_info, query_download_logo
 };
 use cw20_base::ContractError;
 use cw20_base::enumerable::{query_owner_allowances, query_all_accounts, query_spender_allowances};
 use cw20_base::msg::{
-    InstantiateMsg, ExecuteMsg, QueryMsg
+    InstantiateMsg, ExecuteMsg, QueryMsg, MigrateMsg
 };
 
 const CONTRACT_NAME: &str = "crates.io::eames-token";
@@ -208,13 +207,13 @@ pub fn query(
 /// without having to create a new one. CosmWasm, unlike Ethereum - most contracts implement the same
 /// standard (i.e. Cw20) so no need to upload the whole thing (same standard - same core logic).
 /// # Arguments
-/// * `_deps` - mutable dependency which has the storage (state) of the chain
-/// * `_env`  - environment variables which include block information
-/// * `_msg`  - the execute message
+/// * `deps` - mutable dependency which has the storage (state) of the chain
+/// * `_env` - environment variables which include block information
+/// * `_msg` - the execute message
 /// # Returns
 /// * the execute response on Ok
 /// * the error type on Err
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
-    Ok(Response::default())
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    cw20_base::contract::migrate(deps, _env, _msg)
 }
