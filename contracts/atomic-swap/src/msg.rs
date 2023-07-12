@@ -75,8 +75,7 @@ pub enum QueryMsg {
         start_after: Option<String>,
         limit: Option<u32>,
     },
-    /// Returns the details of the named swap, error if not created.
-    /// Return type: DetailsResponse.
+    /// Returns the details of the named swap, error if not created. Return type: DetailsResponse.
     #[returns(DetailsResponse)]
     Details { id: String },
 }

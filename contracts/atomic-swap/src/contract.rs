@@ -422,6 +422,9 @@ fn query_list(
 }
 
 
+// threshold version - unclear logic (not sure what how this is important in migrate)
+const THRESHOLD_VERSION: &str = "0.14.0";
+
 /// Migrate atomic swap smart contract using Cw20-base logic.
 /// # Arguments
 /// * `deps` - mutable dependency which has the storage (state) of the chain
@@ -430,19 +433,22 @@ fn query_list(
 /// # Returns
 /// * migrate response on Ok
 /// * the error on Err
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(
     deps: DepsMut,
     _env: Env,
     _msg: MigrateMsg
 ) -> Result<Response, ContractError> {
-    let original_version =
-        ensure_from_older_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    // ensure that the original smart contract version is of older, or equal version to the one migrating to
+    let original_version = ensure_from_older_version(
+        deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    if original_version < "0.14.0".parse::<semver::Version>().unwrap() {
+    if original_version < THRESHOLD_VERSION.parse::<semver::Version>().unwrap() {
         // Build reverse map of swaps per spender
         let data = SWAPS
             .range(deps.storage, None, None, Ascending)
             .collect::<StdResult<Vec<_>>>()?;
+        // migrating to this contract - pulling storage from original to this
         for (sender, swap) in data {
             SWAPS.save(deps.storage, &sender, &swap)?;
         }

@@ -6,6 +6,7 @@ import { decryptMnemonic } from '../../../common';
 import { Argv } from 'yargs';
 
 export const migrate = async (argv: Argv) => {
+  // parsing the arguments
   const [address] = argv._.slice(-1);
   const { codeId } = argv;
   const prefix = process.env.PREFIX || 'orai';

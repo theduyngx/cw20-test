@@ -136,9 +136,7 @@ We will clarify some cwtools commands to use the services provided by the smart 
 ### Refund
   ```bash
   cwtools wasm execute [hashed_ref] --env .env --input '{
-    "refund": {
-      "id": "some_id"
-    }
+    "refund": { "id": "some_id" }
   }'
   ```
   * `id` is the only requirement for refunding. Meaning refund is local to the smart contract itself.
@@ -147,11 +145,16 @@ We will clarify some cwtools commands to use the services provided by the smart 
 
 ### Migrate
   ```bash
-  cwtools wasm migrate [hashed_ref] --env ../.env --input '{}' --code-id 6012
+  cwtools wasm migrate [hashed_ref] --env ../.env --input '{}' --code-id 6159
   ```
   * Important note: migration requires authorization, meaning the field `--admin` is required when instantiating this contract.
-  * In this migration command, we can see that we're referring to the `[hashed_ref]` of the smart contract (the contract's 
-    address), and its code-id.
+  * Migration is a process that helps change the interal logic of a contract while still keeping the current contract's address.
+    Firstly, you'd need to **build** the new smart contract `.wasm` file and **upload** it. As discussed, this will give you a 
+    simplified `code-id` of the new contract.
+  * In this migration command, the `[hashed_ref]` is the address of the current smart contract that you'd like to keep, and
+    `--code-id` is the simplified id of the new uploaded contract.
+  * After executing the migration, your new uploaded contract will have the original contract's address (`[hased_ref]`), meaning
+    the same contract has had its logic replaced.
   * For now, an input is not required for migration (as with most Cw20 standards).
 <br><br>
 
