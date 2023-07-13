@@ -11,7 +11,7 @@ flexibility and adaptability.
 Atomic swap is P2P, with a definitive sender and recipient. This implementation allows users to execute atomic swaps for both
 **native** and **Cw20 tokens**. It is one-sided, but the other side can be realized by an equivalent (or identical) contract
 on any other blockchain (typically a different one). The implementation also does not allow same sender and recipient.
-Migration is now in development.
+Migration is supported.
 
 Each side of an atomic swap has a sender, a recipient, a hash, and a timeout. It also has a unique id (for future calls to
 reference it). The hash is a sha256-encoded 32-bytes long phrase. The timeout can be either time-based (seconds since
@@ -121,7 +121,7 @@ We will clarify some cwtools commands to use the services provided by the smart 
     of the `Cw20ReceiveMsg`.
   * `msg` is the create message in *binary*. That said, we can see that the message is in Base64 format. This is due to the fact
     that JS actually, eventually does convert this to binary. To get this `msg`, simply go to an online base64 encoder and encode
-    the JSON format of the `--input` in `create`. Or use codes (see more in `crate::test::print_binary`).
+    the JSON format of the `--input` in `create`. Or use codes (see more in `crate::contract::contract_test::print_binary`).
 
 ### Release
   ```bash
@@ -158,7 +158,9 @@ We will clarify some cwtools commands to use the services provided by the smart 
     `--code-id` is the simplified source code id of the new uploaded contract.
   * After executing the migration, your new uploaded contract will have the original contract's address (`[hased_ref]`), meaning
     the same contract has had its logic replaced.
-  * For now, an input is not required for migration (as with most Cw20 standards).
+  * Migration within this contract represents an old version of the swap structure, and a new one that the contract actually
+    uses. This has direct implication on compatibility, in that only the specified "old" version may be compatible to migrate to
+    this current contract.
 <br><br>
 
 **NOTE:** Due to some environment incompatibilites in the configuration of cwtools, the `cwtools` directory in this repository

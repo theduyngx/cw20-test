@@ -20,8 +20,7 @@ use cw20::{
 };
 
 use crate::error::ContractError;
-use crate::state::{all_swap_ids, AtomicSwap, SWAPS};
-use crate::migrate::ensure_from_older_version;
+use crate::state::{all_swap_ids, AtomicSwap, OLD_SWAPS, SWAPS};
 use crate::msg::{
     is_valid_name, BalanceHuman, CreateMsg, DetailsResponse, ExecuteMsg, InstantiateMsg,
     ListResponse, QueryMsg, ReceiveMsg, MigrateMsg
@@ -151,6 +150,7 @@ pub fn execute_create(
         source: info.sender,    // the sender's smart contract
         expires: msg.expires,   // expiration
         balance,                // the balance which is sender's already sent funds on the contract
+        memo: "Hello World".to_string(),
     };
 
     // Try to store it in SWAP, fail if the id already exists (unmodifiable swaps - they're atomic)
@@ -422,10 +422,7 @@ fn query_list(
 }
 
 
-// threshold version - unclear logic (not sure what how this is important in migrate)
-const THRESHOLD_VERSION: &str = "0.14.0";
-
-/// Migrate atomic swap smart contract using Cw20-base logic.
+/// Migrate atomic swap smart contract.
 /// # Arguments
 /// * `deps` - mutable dependency which has the storage (state) of the chain
 /// * `_env` - environment variables which include block information
@@ -439,19 +436,21 @@ pub fn migrate(
     _env: Env,
     _msg: MigrateMsg
 ) -> Result<Response, ContractError> {
-    // ensure that the original smart contract version is of older, or equal version to the one migrating to
-    let original_version = ensure_from_older_version(
-        deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
-    if original_version < THRESHOLD_VERSION.parse::<semver::Version>().unwrap() {
-        // Build reverse map of swaps per spender
-        let data = SWAPS
-            .range(deps.storage, None, None, Ascending)
-            .collect::<StdResult<Vec<_>>>()?;
-        // migrating to this contract - pulling storage from original to this
-        for (sender, swap) in data {
-            SWAPS.save(deps.storage, &sender, &swap)?;
-        }
+    // Build reverse map of swaps
+    let data = OLD_SWAPS
+        .range(deps.storage, None, None, Ascending)
+        .collect::<StdResult<Vec<_>>>()?;
+    // migrating to this contract - pulling storage from original to this
+    for (sender, old_swap) in data {
+        let swap = AtomicSwap {
+            hash      : old_swap.hash,
+            recipient : old_swap.recipient,
+            source    : old_swap.source,
+            expires   : old_swap.expires,
+            balance   : old_swap.balance,
+            memo      : "Hello World".to_string(),
+        };
+        SWAPS.save(deps.storage, &sender, &swap)?;
     }
     Ok(Response::default())
 }

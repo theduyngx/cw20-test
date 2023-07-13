@@ -11,9 +11,9 @@ use cw_storage_plus::{Bound, Map};
 use cw20::{Balance, Expiration};
 
 
-/// Atomic swap offer representation.
+/// Old Atomic swap offer representation.
 #[cw_serde]
-pub struct AtomicSwap {
+pub struct OldAtomicSwap {
     /// This is the sha-256 hash of the preimage
     pub hash      : Binary,
     pub recipient : Addr,
@@ -21,8 +21,26 @@ pub struct AtomicSwap {
     pub expires   : Expiration,
     /// Balance in native tokens, or cw20 token
     pub balance   : Balance,
-    // pub memo: String
 }
+
+/// Atomic swap offer representation.
+#[cw_serde]
+pub struct AtomicSwap {
+    pub hash      : Binary,
+    pub recipient : Addr,
+    pub source    : Addr,
+    pub expires   : Expiration,
+    pub balance   : Balance,
+    pub memo      : String,
+}
+
+/// Original atomic swap
+impl OldAtomicSwap {
+    pub fn is_expired(&self, block: &BlockInfo) -> bool {
+        self.expires.is_expired(block)
+    }
+}
+
 
 /// Atomic swap can check itself whether it has expired or not with block info
 impl AtomicSwap {
@@ -32,7 +50,8 @@ impl AtomicSwap {
 }
 
 /// The cache storage on the smart contract to keep track of swap offers
-pub const SWAPS: Map<&str, AtomicSwap> = Map::new("atomic_swap");
+pub const OLD_SWAPS: Map<&str, OldAtomicSwap> = Map::new("atomic_swap");
+pub const SWAPS: Map<&str, AtomicSwap> = Map::new("new_atomic_swap");
 
 /// This returns the list of ids for all active swaps
 pub fn all_swap_ids<'a>(

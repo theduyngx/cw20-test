@@ -1,5 +1,5 @@
 /*
-Testing for contract, state, and migration.
+Testing for state of contract.
 */
 
 #[cfg(test)]
@@ -11,11 +11,12 @@ mod tests {
     /// Dummy atomic swap entry
     fn dummy_swap() -> AtomicSwap {
         AtomicSwap {
-            recipient: Addr::unchecked("recip"),
-            source: Addr::unchecked("source"),
-            expires: Default::default(),
-            hash: Binary("hash".into()),
-            balance: Default::default(),
+            recipient : Addr::unchecked("recip"),
+            source    : Addr::unchecked("source"),
+            expires   : Default::default(),
+            hash      : Binary("hash".into()),
+            balance   : Default::default(),
+            memo      : "Hello World".to_string(),
         }
     }
 
